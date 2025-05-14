@@ -4,6 +4,8 @@
 
 import { expect } from '@playwright/test'
 import dotenv from 'dotenv'
+import pkg from '../package.json' assert { type: 'json' }
+
 
 // Whitelist of allowed GitHub Pages hosts
 const GITHUB_PAGES_HOSTS = [
@@ -38,10 +40,10 @@ export function buildUrl(page, path) {
 
   if (isGitHubPagesEnvironment(page)) {
     // GitHub Pages environment
-    if (baseURL.endsWith('/een-login')) {
+    if (baseURL.endsWith(`/${pkg.name}`)) {
       return `${baseURL}${path}`
-    } else if (!baseURL.includes('/een-login/')) {
-      return `${baseURL}/een-login${path}`
+    } else if (!baseURL.includes(`/${pkg.name}/`)) {
+      return `${baseURL}/${pkg.name}${path}`
     }
   }
 
@@ -57,7 +59,7 @@ export function buildUrl(page, path) {
  */
 export function createUrlPattern(page, pathSuffix) {
   if (isGitHubPagesEnvironment(page)) {
-    return new RegExp(`.*/een-login${pathSuffix}$`)
+    return new RegExp(`.*/${pkg.name}${pathSuffix}$`)
   }
   return new RegExp(`.*${pathSuffix}$`)
 }
@@ -112,11 +114,11 @@ export async function loginToApplication(page) {
   // In GitHub Pages, we need to handle the OAuth flow
   if (isGitHubPagesEnvironment(page)) {
     // Wait for redirect back to our app with code parameter
-    await page.waitForURL(/.*\/een-login\/\?code=.*/, { timeout: 15000 })
+    await page.waitForURL(/.*\/${pkg.name}\/\?code=.*/, { timeout: 15000 })
     console.log('✅ Redirected back to app with code')
 
     // Wait for the code to be processed and redirect to home
-    await page.waitForURL(/.*\/een-login\/home/, { timeout: 15000 })
+    await page.waitForURL(/.*\/${pkg.name}\/home/, { timeout: 15000 })
     console.log('✅ Code processed, redirected to home')
   } else {
     // Wait for home page in local environment
