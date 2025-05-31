@@ -396,15 +396,17 @@ The document describes several strategies. The recommended strategy was tested a
 source and merge the original repository when appropriate. Please read the document for details, here 
 is a summary of the steps. This assumes that the branch to merge is `develop` in both repositories. 
 
-- create a new EMPTY repository in github
-- Create a Local Bare Clone of the Original Repository
-- Clone this new repository locally with this command
+- create a new EMPTY repository in github for the new application (e.g. with the name `my-een-login-extended`)
+- Create a Local Bare Clone of the Original Repository with this command: 
 `git clone --bare https://github.com/klaushofrichter/een-login.git een-login-original.git`
+- CD into the new directory: `cd my-een-login-extended.git`
 - Push the Mirrored History to Your New Repository as mirror: 
 `git push --mirror https://github.com/YOUR_USERNAME/my-een-login-extended.git`
-- Remove the local repository that was cloned with --bare above
-- Clone the new repository again, but without --bare `git clone https://github.com/YOUR_USERNAME/YOUR_NEW_REPO.git`
+- Remove the local repository that was cloned with --bare above with `cd ..` and `rm -rf een-login-original.git`
+- Clone the new repository, but without --bare `git clone https://github.com/YOUR_USERNAME/my-een-login-extended.git`
+- CD into the new directory with `cd my-een-login-extended`
 - Add the original repository as remote repo: `git remote add upstream-original https://github.com/klaushofrichter/een-login.git`
+  - You can check with `git remote -v` that there are two origin and two upstream-original lines.
 - Do whatever work needs to be done in the new repository, including these steps: 
   - Create the `.env` and all other configuration
   - Change the app name and version number in `package.json`
