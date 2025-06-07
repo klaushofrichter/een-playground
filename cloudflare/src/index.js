@@ -11,18 +11,21 @@ export default {
   async fetch(request, env) {
     // console.log('[Cloudflare Plugin] Fetching request'); // Removed
     const origin = request.headers.get('Origin')
-    // console.log('[Cloudflare Plugin] Request Origin Header:', origin); // Removed
+    console.log('[Cloudflare Plugin] Request Origin Header:', origin); // DEBUG
+    console.log('[Cloudflare Plugin] Request URL:', request.url); // DEBUG
+
+    // Define CORS headers for use across all endpoints
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': origin || '*',
+      'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie', // Add Cookie to allowed headers
+      'Access-Control-Allow-Credentials': 'true', // If you need to send/receive cookies or auth headers
+      'Access-Control-Max-Age': '86400' // 24 hours
+    }
 
     // Handle CORS preflight request
     if (request.method === 'OPTIONS') {
       if (origin) {
-        const corsHeaders = {
-          'Access-Control-Allow-Origin': origin,
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie', // Add Cookie to allowed headers
-          'Access-Control-Allow-Credentials': 'true', // If you need to send/receive cookies or auth headers
-          'Access-Control-Max-Age': '86400' // 24 hours
-        }
         // console.log('[Cloudflare Plugin] OPTIONS Preflight CORS Headers:', JSON.stringify(corsHeaders)); // Removed
         return new Response(null, {
           status: 204, // No Content
@@ -230,6 +233,180 @@ export default {
         return response
       } catch (error) {
         return new Response('Failed to revoke token', { status: 500 })
+      }
+    }
+
+    // Handle remote session cleanup - removes all sessions except the current one
+    // This endpoint allows an authenticated user to clear all other sessions while keeping their own
+    // Useful for security purposes when a user wants to log out all other devices/sessions
+    if (url.pathname === '/admin/removeSessions') {
+      // Extract sessionId from Cookie header, same as /proxy/refreshAccessToken
+      var currentSessionId = request.headers
+        .get('Cookie')
+        ?.split('; ')
+        .find(cookie => cookie.startsWith('sessionId='))
+        ?.split('=')[1]
+
+      if (!currentSessionId) {
+        return new Response('Session ID cookie missing', { status: 401 })
+      }
+
+      // Verify the current session exists in KV storage
+      const currentRefreshToken = await env.EEN_LOGIN.get(currentSessionId)
+      if (!currentRefreshToken) {
+        return new Response('Invalid or expired session', { status: 401 })
+      }
+
+      try {
+        // Get all keys from KV storage
+        const allKeys = await env.EEN_LOGIN.list()
+        let deletedSessions = 0
+        const totalSessions = allKeys.keys.length
+
+        // Delete all sessions except the current one
+        for (const key of allKeys.keys) {
+          if (key.name !== currentSessionId) {
+            await env.EEN_LOGIN.delete(key.name)
+            deletedSessions++
+          }
+        }
+
+        const remainingSessions = totalSessions - deletedSessions
+
+        return new Response(
+          JSON.stringify({
+            message: 'Remote sessions cleared successfully',
+            totalSessions,
+            deletedSessions,
+            remainingSessions
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            }
+          }
+        )
+      } catch (error) {
+        console.error('Error removing sessions:', error)
+        return new Response('Internal server error', { status: 500 })
+      }
+    }
+
+    // Handle version retrieval - gets the DEPLOY_VERSION from KV store
+    if (url.pathname === '/admin/version') {
+      console.log('[Cloudflare Plugin] /admin/version endpoint hit')
+      console.log('[Cloudflare Plugin] CORS headers:', JSON.stringify(corsHeaders))
+      
+      // Extract sessionId from Cookie header for authentication
+      var sessionId = request.headers
+        .get('Cookie')
+        ?.split('; ')
+        .find(cookie => cookie.startsWith('sessionId='))
+        ?.split('=')[1]
+
+      if (!sessionId) {
+        console.log('[Cloudflare Plugin] No sessionId found in cookies')
+        return new Response(
+          JSON.stringify({ version: 'Session ID cookie missing' }),
+          { 
+            status: 401,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            }
+          }
+        )
+      }
+
+      // Verify the session exists in KV storage
+      const refreshToken = await env.EEN_LOGIN.get(sessionId)
+      if (!refreshToken) {
+        console.log('[Cloudflare Plugin] Invalid session for sessionId:', sessionId)
+        return new Response(
+          JSON.stringify({ version: 'Invalid or expired session' }),
+          { 
+            status: 401,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            }
+          }
+        )
+      }
+
+      try {
+        // Get the DEPLOY_VERSION from KV storage
+        const version = await env.EEN_LOGIN.get('DEPLOY_VERSION')
+        console.log('Retrieved DEPLOY_VERSION from KV:', version)
+        
+        const response = new Response(
+          JSON.stringify({
+            version: version || 'cloudflare - unknown version'
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            }
+          }
+        )
+        
+        console.log('[Cloudflare Plugin] Sending response with headers:', JSON.stringify(Object.fromEntries(response.headers.entries())))
+        return response
+      } catch (error) {
+        console.error('Error retrieving version:', error)
+        return new Response(
+          JSON.stringify({
+            version: 'cloudflare - error retrieving version'
+          }),
+          {
+            status: 500,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            }
+          }
+        )
+      }
+    }
+
+    // Handle session count - returns the total number of sessions in KV store
+    if (url.pathname === '/admin/sessionsCount') {
+      // Extract sessionId from Cookie header for authentication
+      var sessionId = request.headers
+        .get('Cookie')
+        ?.split('; ')
+        .find(cookie => cookie.startsWith('sessionId='))
+        ?.split('=')[1]
+
+      if (!sessionId) {
+        return new Response('Session ID cookie missing', { status: 401 })
+      }
+
+      // Verify the current session exists in KV storage
+      const refreshToken = await env.EEN_LOGIN.get(sessionId)
+      if (!refreshToken) {
+        return new Response('Invalid session', { status: 401 })
+      }
+
+      try {
+        // List all keys in the KV store to get the count
+        const listResult = await env.EEN_LOGIN.list()
+        
+        return new Response(
+          JSON.stringify({
+            sessionCount: listResult.keys.length
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            }
+          }
+        )
+      } catch (error) {
+        return new Response('Failed to get session count', { status: 500 })
       }
     }
 

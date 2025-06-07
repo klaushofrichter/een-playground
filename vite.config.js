@@ -270,6 +270,136 @@ const localOauthProxy = env => {
     }
   }
 
+  // Helper to handle /admin/sessionsCount
+  const handleSessionsCount = async (req, res /*, next */) => {
+    // console.log('[Vite Plugin] Intercepted /admin/sessionsCount'); // DEBUG
+
+    // Try to get sessionId from cookie
+    let sessionId = req.headers.cookie
+      ?.split('; ')
+      .find(cookie => cookie.startsWith('sessionId='))
+      ?.split('=')[1]
+
+    if (!sessionId) {
+      console.error('[Vite Plugin] Missing sessionId for sessionsCount')
+      res.statusCode = 401
+      return res.end('Session ID cookie missing')
+    }
+
+    // Verify the current session exists
+    const refreshToken = sessions.get(sessionId)
+    if (!refreshToken) {
+      console.error(`[Vite Plugin] No refresh token found for session: ${sessionId}`)
+      res.statusCode = 401
+      return res.end('Invalid or expired session')
+    }
+
+    try {
+      // Get the total count of sessions
+      const sessionCount = sessions.size
+
+      res.setHeader('Content-Type', 'application/json')
+      res.statusCode = 200
+      res.end(JSON.stringify({ sessionCount }))
+    } catch (error) {
+      console.error('[Vite Plugin] Error getting session count:', error)
+      res.statusCode = 500
+      res.end(`Server error: ${error.message}`)
+    }
+  }
+
+  // Helper to handle /admin/removeSessions
+  const handleRemoveSessions = async (req, res /*, next */) => {
+    // console.log('[Vite Plugin] Intercepted /admin/removeSessions'); // DEBUG
+
+    // Try to get sessionId from cookie
+    let sessionId = req.headers.cookie
+      ?.split('; ')
+      .find(cookie => cookie.startsWith('sessionId='))
+      ?.split('=')[1]
+
+    if (!sessionId) {
+      console.error('[Vite Plugin] Missing sessionId for removeSessions')
+      res.statusCode = 401
+      return res.end('Session ID cookie missing')
+    }
+
+    // Verify the current session exists
+    const currentRefreshToken = sessions.get(sessionId)
+    if (!currentRefreshToken) {
+      console.error(`[Vite Plugin] No refresh token found for session: ${sessionId}`)
+      res.statusCode = 401
+      return res.end('Invalid or expired session')
+    }
+
+    try {
+      // Count sessions before deletion
+      const totalSessions = sessions.size
+      let deletedSessions = 0
+
+      // Remove all sessions except the current one
+      for (const [key] of sessions) {
+        if (key !== sessionId) {
+          sessions.delete(key)
+          deletedSessions++
+        }
+      }
+
+      const remainingSessions = sessions.size
+
+      res.setHeader('Content-Type', 'application/json')
+      res.statusCode = 200
+      res.end(JSON.stringify({
+        message: 'Remote sessions cleared successfully',
+        totalSessions,
+        deletedSessions,
+        remainingSessions
+      }))
+    } catch (error) {
+      console.error('[Vite Plugin] Error removing sessions:', error)
+      res.statusCode = 500
+      res.end(`Server error: ${error.message}`)
+    }
+  }
+
+  // Helper to handle /admin/version
+  const handleVersion = async (req, res /*, next */) => {
+    // console.log('[Vite Plugin] Intercepted /admin/version'); // DEBUG
+
+    // Try to get sessionId from cookie
+    let sessionId = req.headers.cookie
+      ?.split('; ')
+      .find(cookie => cookie.startsWith('sessionId='))
+      ?.split('=')[1]
+
+    if (!sessionId) {
+      console.error('[Vite Plugin] Missing sessionId for version')
+      res.statusCode = 401
+      return res.end('Session ID cookie missing')
+    }
+
+    // Verify the current session exists
+    const refreshToken = sessions.get(sessionId)
+    if (!refreshToken) {
+      console.error(`[Vite Plugin] No refresh token found for session: ${sessionId}`)
+      res.statusCode = 401
+      return res.end('Invalid or expired session')
+    }
+
+    try {
+      // Get name and version from package.json (already imported as pkg)
+      const versionString = `vite - ${pkg.name} - ${pkg.version}`
+
+      res.setHeader('Content-Type', 'application/json')
+      res.statusCode = 200
+      res.end(JSON.stringify({ version: versionString }))
+    } catch (error) {
+      console.error('[Vite Plugin] Error getting version:', error)
+      res.statusCode = 500
+      res.end(`Server error: ${error.message}`)
+    }
+  }
+
   return {
     name: 'local-oauth-proxy',
     configureServer(server) {
@@ -284,6 +414,16 @@ const localOauthProxy = env => {
         }
         if (req.method === 'POST' && req.url?.startsWith('/proxy/revoke')) {
           return handleRevoke(req, res, next)
+        }
+        // Admin endpoints
+        if (req.method === 'GET' && req.url?.startsWith('/admin/sessionsCount')) {
+          return handleSessionsCount(req, res, next)
+        }
+        if (req.method === 'DELETE' && req.url?.startsWith('/admin/removeSessions')) {
+          return handleRemoveSessions(req, res, next)
+        }
+        if (req.method === 'GET' && req.url?.startsWith('/admin/version')) {
+          return handleVersion(req, res, next)
         }
         // If not matching our paths, pass control to the next middleware
         next()
