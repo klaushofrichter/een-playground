@@ -11,8 +11,8 @@ export default {
   async fetch(request, env) {
     // console.log('[Cloudflare Plugin] Fetching request'); // Removed
     const origin = request.headers.get('Origin')
-    console.log('[Cloudflare Plugin] Request Origin Header:', origin); // DEBUG
-    console.log('[Cloudflare Plugin] Request URL:', request.url); // DEBUG
+    //console.log('[Cloudflare Plugin] Request Origin Header:', origin); // DEBUG
+    //console.log('[Cloudflare Plugin] Request URL:', request.url); // DEBUG
 
     // Define CORS headers for use across all endpoints
     const corsHeaders = {
@@ -322,8 +322,8 @@ export default {
 
     // Handle version retrieval - gets the DEPLOY_VERSION from KV store
     if (url.pathname === '/admin/version') {
-      console.log('[Cloudflare Plugin] /admin/version endpoint hit')
-      console.log('[Cloudflare Plugin] CORS headers:', JSON.stringify(corsHeaders))
+      //console.log('[Cloudflare Plugin] /admin/version endpoint hit')
+      //console.log('[Cloudflare Plugin] CORS headers:', JSON.stringify(corsHeaders))
       
       // Extract sessionId from Cookie header for authentication
       var sessionId = request.headers
@@ -365,7 +365,7 @@ export default {
       try {
         // Get the DEPLOY_VERSION from KV storage
         const version = await env.EEN_LOGIN.get('DEPLOY_VERSION')
-        console.log('Retrieved DEPLOY_VERSION from KV:', version)
+        //console.log('Retrieved DEPLOY_VERSION from KV:', version)
         
         const response = new Response(
           JSON.stringify({
@@ -379,7 +379,7 @@ export default {
           }
         )
         
-        console.log('[Cloudflare Plugin] Sending response with headers:', JSON.stringify(Object.fromEntries(response.headers.entries())))
+        //console.log('[Cloudflare Plugin] Sending response with headers:', JSON.stringify(Object.fromEntries(response.headers.entries())))
         return response
       } catch (error) {
         console.error('Error retrieving version:', error)
