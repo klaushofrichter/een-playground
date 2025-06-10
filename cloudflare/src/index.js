@@ -11,8 +11,8 @@ export default {
   async fetch(request, env) {
     // console.log('[Cloudflare Plugin] Fetching request'); // Removed
     const origin = request.headers.get('Origin')
-    console.log('[Cloudflare Plugin] Request Origin Header:', origin); // DEBUG
-    console.log('[Cloudflare Plugin] Request URL:', request.url); // DEBUG
+    //console.log('[Cloudflare Plugin] Request Origin Header:', origin); // DEBUG
+    //console.log('[Cloudflare Plugin] Request URL:', request.url); // DEBUG
 
     // Define CORS headers for use across all endpoints
     const corsHeaders = {
@@ -306,7 +306,7 @@ export default {
           }
         )
       } catch (error) {
-        console.error('Error removing sessions:', error)
+        // console.error('Error removing sessions:', error); // Removed
         return new Response(
           JSON.stringify({ error: 'Internal server error' }),
           { 
@@ -322,9 +322,6 @@ export default {
 
     // Handle version retrieval - gets the DEPLOY_VERSION from KV store
     if (url.pathname === '/admin/version') {
-      console.log('[Cloudflare Plugin] /admin/version endpoint hit')
-      console.log('[Cloudflare Plugin] CORS headers:', JSON.stringify(corsHeaders))
-      
       // Extract sessionId from Cookie header for authentication
       var sessionId = request.headers
         .get('Cookie')
@@ -333,9 +330,8 @@ export default {
         ?.split('=')[1]
 
       if (!sessionId) {
-        console.log('[Cloudflare Plugin] No sessionId found in cookies')
         return new Response(
-          JSON.stringify({ version: 'Session ID cookie missing' }),
+          JSON.stringify({ error: 'Session ID cookie missing' }),
           { 
             status: 401,
             headers: {
@@ -349,9 +345,8 @@ export default {
       // Verify the session exists in KV storage
       const refreshToken = await env.EEN_LOGIN.get(sessionId)
       if (!refreshToken) {
-        console.log('[Cloudflare Plugin] Invalid session for sessionId:', sessionId)
         return new Response(
-          JSON.stringify({ version: 'Invalid or expired session' }),
+          JSON.stringify({ error: 'Invalid or expired session' }),
           { 
             status: 401,
             headers: {
@@ -365,9 +360,8 @@ export default {
       try {
         // Get the DEPLOY_VERSION from KV storage
         const version = await env.EEN_LOGIN.get('DEPLOY_VERSION')
-        console.log('Retrieved DEPLOY_VERSION from KV:', version)
         
-        const response = new Response(
+        return new Response(
           JSON.stringify({
             version: version || 'cloudflare - unknown version'
           }),
@@ -378,14 +372,11 @@ export default {
             }
           }
         )
-        
-        console.log('[Cloudflare Plugin] Sending response with headers:', JSON.stringify(Object.fromEntries(response.headers.entries())))
-        return response
       } catch (error) {
-        console.error('Error retrieving version:', error)
+        // console.error('Error retrieving version:', error); // Removed
         return new Response(
           JSON.stringify({
-            version: 'cloudflare - error retrieving version'
+            error: 'Failed to retrieve version'
           }),
           {
             status: 500,
