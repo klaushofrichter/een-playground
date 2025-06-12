@@ -1,7 +1,7 @@
 {
   "name": "een-playground",
-  "version": "0.0.7",
-  "lastCommit": "2025-06-12T22:30:04.131Z",
+  "version": "0.0.8",
+  "lastCommit": "2025-06-12T23:19:04.482Z",
   "private": true,
   "type": "module",
   "base": "/een-playground/",
@@ -24,6 +24,9 @@
   },
   "dependencies": {
     "axios": "^1.6.7",
+    "chart.js": "^4.4.9",
+    "chartjs-adapter-date-fns": "^3.0.0",
+    "date-fns": "^4.1.0",
     "gh-pages": "^6.3.0",
     "pinia": "^2.1.7",
     "vue": "^3.4.15",

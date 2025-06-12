@@ -413,14 +413,82 @@
       </div>
     </div>
   </div>
+
+  <!-- Metrics Chart Modal -->
+  <div v-if="showMetricsChart" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+          📊 Camera Metrics - {{ selectedCamera?.name }}
+        </h3>
+        <button 
+          @click="closeMetricsChart"
+          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Chart Container -->
+      <div class="p-6">
+        <div class="h-96 w-full">
+          <canvas id="metricsChart"></canvas>
+        </div>
+        
+        <!-- Metrics Summary -->
+        <div v-if="metricsData" class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div v-for="metric in metricsData" :key="metric.target" 
+               class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+            <h4 class="font-medium text-gray-900 dark:text-white mb-2">
+              {{ formatMetricLabel(metric.target) }}
+            </h4>
+            <div class="text-sm text-gray-600 dark:text-gray-300">
+              <div>Data Points: {{ metric.dataPoints.length }}</div>
+              <div>Latest Value: {{ formatMetricValue(metric.dataPoints[metric.dataPoints.length - 1]?.[0] || 0) }}</div>
+              <div>Time Range: {{ Math.round((metric.dataPoints[metric.dataPoints.length - 1]?.[1] - metric.dataPoints[0]?.[1]) / (1000 * 60 * 60)) }}h</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { cameraService } from '../services/cameras'
 import { mediaService } from '../services/media'
+import {
+  Chart,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  LineController,
+  Title,
+  Tooltip,
+  Legend,
+  TimeScale
+} from 'chart.js'
+import 'chartjs-adapter-date-fns'
+
+// Register Chart.js components
+Chart.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  LineController,
+  Title,
+  Tooltip,
+  Legend,
+  TimeScale
+)
 
 // Router for navigation
 const router = useRouter()
@@ -445,6 +513,11 @@ const loadingTunnel = ref(false)
 const loadingMetrics = ref(false)
 const loadingReboot = ref(false)
 const actionMessage = ref(null)
+
+// Metrics chart data
+const metricsData = ref(null)
+const metricsChart = ref(null)
+const showMetricsChart = ref(false)
 
 // Load cameras from the API
 const loadCameras = async () => {
@@ -682,9 +755,18 @@ const getCameraMetrics = async () => {
       period: 'hour'
     })
     console.log('Camera metrics:', metricsResponse)
+    
+    // Store metrics data and show chart
+    metricsData.value = metricsResponse
+    showMetricsChart.value = true
+    
+    // Create chart after DOM update
+    await nextTick()
+    createMetricsChart()
+    
     actionMessage.value = {
       type: 'success',
-      text: '📊 Metrics loaded! Check console for details.'
+      text: '📊 Metrics loaded and visualized!'
     }
     clearActionMessage()
   } catch (err) {
@@ -697,6 +779,130 @@ const getCameraMetrics = async () => {
   } finally {
     loadingMetrics.value = false
   }
+}
+
+// Create metrics chart
+const createMetricsChart = () => {
+  if (!metricsData.value || !document.getElementById('metricsChart')) return
+  
+  // Destroy existing chart if it exists
+  if (metricsChart.value) {
+    metricsChart.value.destroy()
+  }
+  
+  const ctx = document.getElementById('metricsChart').getContext('2d')
+  
+  // Prepare datasets from metrics data
+  const datasets = metricsData.value.map((metric, index) => {
+    const colors = [
+      { border: 'rgb(59, 130, 246)', background: 'rgba(59, 130, 246, 0.1)' }, // Blue
+      { border: 'rgb(16, 185, 129)', background: 'rgba(16, 185, 129, 0.1)' }, // Green
+      { border: 'rgb(245, 158, 11)', background: 'rgba(245, 158, 11, 0.1)' }   // Yellow
+    ]
+    
+    return {
+      label: formatMetricLabel(metric.target),
+      data: metric.dataPoints.map(point => ({
+        x: new Date(point[1]),
+        y: point[0]
+      })),
+      borderColor: colors[index % colors.length].border,
+      backgroundColor: colors[index % colors.length].background,
+      tension: 0.1,
+      fill: false
+    }
+  })
+  
+  metricsChart.value = new Chart(ctx, {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        title: {
+          display: true,
+          text: 'Camera Metrics (Last 24 Hours)',
+          color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#374151'
+        },
+        legend: {
+          labels: {
+            color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#374151'
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'time',
+          time: {
+            unit: 'hour',
+            displayFormats: {
+              hour: 'MMM dd HH:mm'
+            }
+          },
+          title: {
+            display: true,
+            text: 'Time',
+            color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#374151'
+          },
+          ticks: {
+            color: document.documentElement.classList.contains('dark') ? '#d1d5db' : '#6b7280'
+          },
+          grid: {
+            color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'
+          }
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Value',
+            color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#374151'
+          },
+          ticks: {
+            color: document.documentElement.classList.contains('dark') ? '#d1d5db' : '#6b7280',
+            callback: function(value) {
+              return formatMetricValue(value)
+            }
+          },
+          grid: {
+            color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'
+          }
+        }
+      }
+    }
+  })
+}
+
+// Format metric labels for display
+const formatMetricLabel = (target) => {
+  const labels = {
+    'kilobytesOnDisk': 'Storage Used (KB)',
+    'bytesStored': 'Data Stored (Bytes)',
+    'bandwidthRealtime': 'Realtime Bandwidth (Bytes/s)'
+  }
+  return labels[target] || target
+}
+
+// Format metric values for display
+const formatMetricValue = (value) => {
+  if (value >= 1000000000) {
+    return (value / 1000000000).toFixed(1) + 'G'
+  } else if (value >= 1000000) {
+    return (value / 1000000).toFixed(1) + 'M'
+  } else if (value >= 1000) {
+    return (value / 1000).toFixed(1) + 'K'
+  }
+  return value.toFixed(0)
+}
+
+// Close metrics chart
+const closeMetricsChart = () => {
+  showMetricsChart.value = false
+  if (metricsChart.value) {
+    metricsChart.value.destroy()
+    metricsChart.value = null
+  }
+  metricsData.value = null
 }
 
 // Reboot camera (placeholder - would need specific API)
