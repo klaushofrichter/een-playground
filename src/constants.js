@@ -1,8 +1,8 @@
 // Application constants - see also .env configuration and package.json
 
 // Application name
-export const APP_NAME = 'EEN Login'
-export const APP_DESCRIPTION = 'EEN Login Application'
+export const APP_NAME = 'EEN Playground'
+export const APP_DESCRIPTION = 'EEN Playground Application'
 
 // Theme configuration
 export const THEME = {

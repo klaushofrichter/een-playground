@@ -1,10 +1,10 @@
 {
-  "name": "een-login",
-  "version": "0.1.104",
-  "lastCommit": "2025-06-11T20:27:17.371Z",
+  "name": "een-playground",
+  "version": "0.0.2",
+  "lastCommit": "2025-06-12T00:35:26.703Z",
   "private": true,
   "type": "module",
-  "base": "/een-login/",
+  "base": "/een-playground/",
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/prepare-dist-package.js",
