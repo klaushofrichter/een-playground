@@ -65,7 +65,7 @@
                             <p v-if="camera.status" class="text-xs text-gray-500 dark:text-gray-400">
                               <strong>Status:</strong>
                               <span :class="getStatusColor(camera.status)">
-                                {{ ' ' + (typeof camera.status === 'object' ? camera.status.connectionStatus || JSON.stringify(camera.status) : camera.status) }}
+                                {{ getStatusIndicator(camera.status) + ' ' + (typeof camera.status === 'object' ? camera.status.connectionStatus || JSON.stringify(camera.status) : camera.status) }}
                               </span>
                             </p>
                             <p v-if="camera.type" class="text-xs text-gray-500 dark:text-gray-400">
@@ -75,16 +75,6 @@
                               <strong>Location:</strong> {{ camera.location }}
                             </p>
                           </div>
-                        </div>
-                        <div v-if="camera.isOnline" class="ml-2 flex-shrink-0">
-                          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                            🟢 Online
-                          </span>
-                        </div>
-                        <div v-else class="ml-2 flex-shrink-0">
-                          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                            🔴 Offline
-                          </span>
                         </div>
                       </div>
                       
@@ -301,6 +291,31 @@ const getStatusColor = (status) => {
     return 'text-yellow-600 dark:text-yellow-400'
   }
   return 'text-gray-600 dark:text-gray-400'
+}
+
+// Get status indicator emoji based on camera status
+const getStatusIndicator = (status) => {
+  if (!status) return '⚪'
+  
+  // Handle status as object (e.g., { "connectionStatus": "online" })
+  let statusText = ''
+  if (typeof status === 'object') {
+    statusText = status.connectionStatus || JSON.stringify(status)
+  } else if (typeof status === 'string') {
+    statusText = status
+  } else {
+    return '⚪'
+  }
+  
+  const lowerStatus = statusText.toLowerCase()
+  if (lowerStatus.includes('online') || lowerStatus.includes('active')) {
+    return '🟢'
+  } else if (lowerStatus.includes('offline') || lowerStatus.includes('inactive')) {
+    return '🔴'
+  } else if (lowerStatus.includes('warning') || lowerStatus.includes('issue')) {
+    return '🟡'
+  }
+  return '⚪'
 }
 
 // Open modal with camera details and live image
