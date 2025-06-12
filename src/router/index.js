@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/auth'
 import { getAuthUrl } from '../services/auth'
 
 // Define our list of valid routes for easier checking
-const validRoutes = ['home', 'sensors', 'about', 'profile', 'settings', 'direct']
+const validRoutes = ['home', 'sensors', 'cameras', 'about', 'profile', 'settings', 'direct']
 
 const routes = [
   {
@@ -28,6 +28,12 @@ const routes = [
     path: '/sensors',
     name: 'Sensors',
     component: () => import('../views/Sensors.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/cameras',
+    name: 'Cameras',
+    component: () => import('../views/Cameras.vue'),
     meta: { requiresAuth: true }
   },
   {
