@@ -13,6 +13,100 @@
         <div class="border-t border-gray-200 dark:border-gray-700">
           <div class="px-4 py-5 sm:p-6">
             <div class="grid grid-cols-1 gap-6">
+              <!-- Gateways Section -->
+              <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                <div class="flex items-center justify-between mb-4">
+                  <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100">Sensor Gateways</h4>
+                  <button
+                    @click="loadGateways"
+                    :disabled="gatewaysLoading"
+                    class="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {{ gatewaysLoading ? 'Loading...' : 'Refresh Gateways' }}
+                  </button>
+                </div>
+
+                <!-- Error Display -->
+                <div v-if="gatewaysError" class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                  <p class="text-sm text-red-700 dark:text-red-400">{{ gatewaysError }}</p>
+                </div>
+
+                <!-- Gateways Loading State -->
+                <div v-if="gatewaysLoading && !gateways.length" class="text-center py-8">
+                  <div class="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-primary-600 bg-primary-100 dark:bg-primary-900 dark:text-primary-400">
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-primary-600 dark:text-primary-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Loading gateways...
+                  </div>
+                </div>
+
+                <!-- Gateways Grid -->
+                <div v-else-if="gateways.length > 0" class="space-y-4">
+                  <div class="text-sm text-gray-600 dark:text-gray-400">
+                    Found {{ gateways.length }} gateway device{{ gateways.length !== 1 ? 's' : '' }}
+                  </div>
+                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div
+                      v-for="gateway in gateways"
+                      :key="gateway.id"
+                      class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow duration-200"
+                    >
+                      <div class="flex items-start justify-between">
+                        <div class="flex-1 min-w-0">
+                          <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate mb-2">
+                            {{ gateway.name || 'Unnamed Gateway' }}
+                          </h5>
+                          <div class="space-y-1">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                              <strong>ID:</strong> {{ gateway.id }}
+                            </p>
+                            <p v-if="gateway.status" class="text-xs text-gray-500 dark:text-gray-400">
+                              <strong>Status:</strong>
+                              <span :class="getStatusColor(gateway.status)">
+                                {{ ' ' + (typeof gateway.status === 'object' ? gateway.status.connectionStatus || JSON.stringify(gateway.status) : gateway.status) }}
+                              </span>
+                            </p>
+                            <p v-if="gateway.networkInfo?.mainIp" class="text-xs text-gray-500 dark:text-gray-400">
+                              <strong>IP:</strong> {{ gateway.networkInfo.mainIp }}
+                            </p>
+                            <p v-if="gateway.locationSummary?.name" class="text-xs text-gray-500 dark:text-gray-400">
+                              <strong>Location:</strong> {{ gateway.locationSummary.name }}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- Gateway Actions -->
+                      <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                        <div class="flex space-x-2">
+                          <button
+                            @click="viewGatewayDetails(gateway)"
+                            class="flex-1 text-xs px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                          >
+                            Details
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- No Gateways Found -->
+                <div v-else class="text-center py-8">
+                  <div class="text-gray-500 dark:text-gray-400">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No gateways found</h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      No gateway devices are currently available in your account.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <!-- Controls Section -->
               <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                 <div class="flex items-center justify-between mb-4">
@@ -185,6 +279,70 @@
           </div>
         </div>
       </div>
+
+      <!-- Gateway Detail Modal -->
+      <div
+        v-if="selectedGateway"
+        class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 px-4"
+      >
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
+          <div class="flex justify-between items-start mb-4">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">
+              Gateway Details
+            </h3>
+            <button
+              @click="selectedGateway = null"
+              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+              <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ selectedGateway.name || 'N/A' }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">ID</label>
+              <p class="mt-1 text-sm text-gray-900 dark:text-gray-100 font-mono">{{ selectedGateway.id }}</p>
+            </div>
+            <div v-if="selectedGateway.status">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+              <p class="mt-1 text-sm" :class="getStatusColor(selectedGateway.status)">
+                {{ typeof selectedGateway.status === 'object' ? selectedGateway.status.connectionStatus || JSON.stringify(selectedGateway.status) : selectedGateway.status }}
+              </p>
+            </div>
+            <div v-if="selectedGateway.networkInfo?.mainIp">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">IP Address</label>
+              <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ selectedGateway.networkInfo.mainIp }}</p>
+            </div>
+            <div v-if="selectedGateway.locationSummary?.name">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Location</label>
+              <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ selectedGateway.locationSummary.name }}</p>
+            </div>
+            <div v-if="selectedGateway.deviceInfo">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Device Info</label>
+              <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                {{ selectedGateway.deviceInfo.icon || 'N/A' }}
+              </p>
+            </div>
+            <div v-if="selectedGateway.notes">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
+              <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ selectedGateway.notes }}</p>
+            </div>
+          </div>
+          <div class="mt-6 flex justify-end">
+            <button
+              @click="selectedGateway = null"
+              class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -194,6 +352,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { sensorService } from '../services/sensors'
+import { sensorGatewayService } from '../services/sensorGateways'
 
 // Router for navigation
 const router = useRouter()
@@ -206,6 +365,43 @@ const sensors = ref([])
 const sensorsLoading = ref(false)
 const sensorsError = ref('')
 const selectedSensor = ref(null)
+
+// Gateway data
+const gateways = ref([])
+const gatewaysLoading = ref(false)
+const gatewaysError = ref('')
+const selectedGateway = ref(null)
+
+// Load gateways from the API
+const loadGateways = async () => {
+  gatewaysLoading.value = true
+  gatewaysError.value = ''
+  gateways.value = []
+
+  try {
+    const gatewaysResponse = await sensorGatewayService.listSensorGateways({
+      include: ['status', 'networkInfo', 'locationSummary', 'deviceInfo', 'notes'],
+      sort: ['+name']
+    })
+    gateways.value = gatewaysResponse.results || []
+  } catch (err) {
+    console.error('Error loading gateways:', err)
+    gatewaysError.value = err.message || 'Failed to load gateway devices'
+  } finally {
+    gatewaysLoading.value = false
+  }
+}
+
+// View gateway details
+const viewGatewayDetails = (gateway) => {
+  selectedGateway.value = gateway
+}
+
+// Load both sensors and gateways on mount
+onMounted(() => {
+  loadSensors()
+  loadGateways()
+})
 
 // Load sensors from the API
 const loadSensors = async () => {
@@ -266,9 +462,4 @@ const viewCamera = (cameraId) => {
   // to navigate to a dedicated camera page or pass the camera ID as a parameter
   router.push({ path: '/home', query: { cameraId } })
 }
-
-// Load sensors when component is mounted
-onMounted(() => {
-  loadSensors()
-})
 </script> 
