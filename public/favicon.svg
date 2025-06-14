@@ -1,4 +1,43 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="32" height="32">
-  <circle cx="50" cy="50" r="45" fill="#4299e1" />
-  <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="white">EEN</text>
+  <defs>
+    <!-- Rainbow gradient for background -->
+    <linearGradient id="rainbowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff0080" />
+      <stop offset="16.66%" stop-color="#ff4000" />
+      <stop offset="33.33%" stop-color="#ff8000" />
+      <stop offset="50%" stop-color="#ffff00" />
+      <stop offset="66.66%" stop-color="#80ff00" />
+      <stop offset="83.33%" stop-color="#00ff80" />
+      <stop offset="100%" stop-color="#0080ff" />
+    </linearGradient>
+    <!-- White glow for text -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Shadow for depth -->
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.3)"/>
+    </filter>
+  </defs>
+  
+  <!-- Main circle with rainbow gradient -->
+  <circle cx="50" cy="50" r="45" fill="url(#rainbowGradient)" filter="url(#shadow)" />
+  
+  <!-- Inner circle for depth -->
+  <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1" />
+  
+  <!-- Playful decorative dots -->
+  <circle cx="25" cy="25" r="3" fill="rgba(255,255,255,0.6)" />
+  <circle cx="75" cy="25" r="2" fill="rgba(255,255,255,0.5)" />
+  <circle cx="25" cy="75" r="2" fill="rgba(255,255,255,0.5)" />
+  <circle cx="75" cy="75" r="3" fill="rgba(255,255,255,0.6)" />
+  
+  <!-- Main text with glow effect -->
+  <text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" 
+        font-family="Arial, sans-serif" font-size="32" font-weight="bold" 
+        fill="white" filter="url(#glow)">EEN</text>
 </svg> 

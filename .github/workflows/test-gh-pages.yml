@@ -65,8 +65,8 @@ jobs:
           PLAYWRIGHT_TEST_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ steps.extract_repo_name.outputs.LAST_PART }}
           VITE_EEN_CLIENT_ID: ${{ secrets.VITE_EEN_CLIENT_ID }}
           VITE_EEN_CLIENT_SECRET: ${{ secrets.VITE_EEN_CLIENT_SECRET }}
-          VITE_REDIRECT_URI: https://een-login.klaushofrichter.workers.dev 
-          VITE_AUTH_PROXY_URL: ${{ steps.extract_repo_name.outputs.LAST_PART }}.klaushofrichter.workers.dev
+          VITE_REDIRECT_URI: https://${{ github.repository_owner }}.github.io/${{ steps.extract_repo_name.outputs.LAST_PART }}
+          VITE_AUTH_PROXY_URL: https://een-login.klaushofrichter.workers.dev
           TEST_USER: ${{ secrets.TEST_USER }}
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
           NODE_ENV: 'production' 
