@@ -14,6 +14,8 @@ The application uses the EEN APIs, but is otherwise not supported
 by Eagle Eye Networks. Visit the [Eagle Eye Networks Developer Portal](https://developer.eagleeyenetworks.com/)
 for more information about the Eagle Eye Networks APIs. 
 
+For detailed API documentation of the services used in this application, please refer to [EEN_API_DOCUMENTATION.md](./EEN_API_DOCUMENTATION.md).
+
 
 ![GH Pages Deployment](https://github.com/klaushofrichter/een-login/actions/workflows/deploy.yml/badge.svg?event=push&label=GH%20Pages) 
 ![CodeQL Check](https://github.com/klaushofrichter/een-login/actions/workflows/codeql.yml/badge.svg?label=CodeQL) 
@@ -71,8 +73,8 @@ The frontend code automatically adapts to whichever proxy is configured via the 
 
 ## Prerequisites
 
--   Node.js (v18 or higher recommended)
--   npm or yarn
+-   Node.js (v20.19 or higher recommended)
+-   npm
 -   An Eagle Eye Networks (EEN) Developer Account:
     -   Create an account at [EEN Developer Portal](https://developer.eagleeyenetworks.com/docs/getting-started#get-an-account)
     -   Create Client Credentials (OAuth API Key) in the [My Application section](https://developer.eagleeyenetworks.com/my-apps)
@@ -98,8 +100,6 @@ This setup involves configuring both the frontend Vue application and deploying 
    -   Install frontend dependencies:
        ```bash
        npm install
-       # or
-       yarn install
        ```
    -   Create a `.env` file in the **root** directory. Add the following variables:
        ```env
@@ -153,8 +153,6 @@ This setup involves configuring both the frontend Vue application and deploying 
 **5. Start the development server:**
    ```bash
    npm run dev
-   # or
-   yarn dev
    ```
 
    The application will typically be available at `http://127.0.0.1:3333`.
@@ -252,9 +250,22 @@ een-login/
     -   Manages the user's authentication state within the browser (access token, user profile).
     -   Provides actions to initiate login, complete login (storing the token received from the worker), logout, and trigger token refresh via the worker.
 -   **`services/auth.js` (Frontend):**
-    -   Constructs the initial EEN OAuth URL.
-    -   Sends the authorization `code` to the `/api/auth/callback` endpoint of the deployed Cloudflare Worker.
-    -   Calls the `/api/auth/refresh` endpoint of the worker when a token refresh is needed.
+    -   Handles communication with the authentication proxy (either local Vite proxy or Cloudflare Worker).
+    -   Manages the OAuth flow and token refresh process.
+-   **`services/user.js` (Frontend):**
+    -   Provides user profile information and system details.
+    -   Implements admin-only features for session management and version information.
+-   **`services/cameras.js` (Frontend):**
+    -   Manages camera-related operations.
+    -   Provides functionality for listing, adding, updating, and deleting cameras.
+-   **`services/sensors.js` (Frontend):**
+    -   Handles sensor device operations.
+    -   Provides functionality for managing sensor devices and their data.
+-   **`services/media.js` (Frontend):**
+    -   Manages media operations for cameras.
+    -   Provides functionality for retrieving live and recorded images.
+
+For detailed API documentation of these services, please refer to [EEN_API_DOCUMENTATION.md](./EEN_API_DOCUMENTATION.md).
 
 ## Authentication Flow (with Included Cloudflare Worker Proxy)
 
@@ -405,9 +416,9 @@ source and merge the original repository when appropriate. Please read the docum
 is a summary of the steps. This assumes that the branch to merge is `develop` in both repositories. 
 
 - create a new EMPTY repository in github for the new application (e.g. with the name `my-een-login-extended`)
-- Create a Local Bare Clone of the Original Repository with this command: 
+- In a terminal, create a Local Bare Clone of the Original een-login Repository with this command: 
 `git clone --bare https://github.com/klaushofrichter/een-login.git een-login-original.git`
-- CD into the new directory: `cd my-een-login-extended.git`
+- CD into the new directory: `cd my-een-login-original.git`
 - Push the Mirrored History to Your New Repository as mirror: 
 `git push --mirror https://github.com/YOUR_USERNAME/my-een-login-extended.git`
 - Remove the local repository that was cloned with --bare above with `cd ..` and `rm -rf een-login-original.git`
@@ -419,6 +430,7 @@ is a summary of the steps. This assumes that the branch to merge is `develop` in
   - Create the `.env` and all other configuration
   - Change the app name and version number in `package.json`
   - Change the app name also in `src/constants.js`
+  - Update the README.md
   - Add features as desired.  
 - Commit your changes in the new repository
 - In order to get any changes that happened in the original sources, perform these steps
