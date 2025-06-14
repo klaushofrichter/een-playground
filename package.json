@@ -1,10 +1,10 @@
 {
-  "name": "een-login",
-  "version": "0.1.103",
-  "lastCommit": "2025-06-10T20:50:04.535Z",
+  "name": "een-playground",
+  "version": "0.0.13",
+  "lastCommit": "2025-06-14T01:20:05.296Z",
   "private": true,
   "type": "module",
-  "base": "/een-login/",
+  "base": "/een-playground/",
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/prepare-dist-package.js",
@@ -24,6 +24,9 @@
   },
   "dependencies": {
     "axios": "^1.6.7",
+    "chart.js": "^4.4.9",
+    "chartjs-adapter-date-fns": "^3.0.0",
+    "date-fns": "^4.1.0",
     "gh-pages": "^6.3.0",
     "pinia": "^2.1.7",
     "vue": "^3.4.15",
