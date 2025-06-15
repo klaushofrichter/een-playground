@@ -525,6 +525,7 @@ import { useAuthStore } from '../stores/auth'
 import { cameraService } from '../services/cameras'
 import { mediaService } from '../services/media'
 import { mediaSessionService } from '../services/mediaSession'
+import { feedsService } from '../services/feeds'
 import {
   Chart,
   CategoryScale,
@@ -1033,31 +1034,12 @@ const initializeMediaSessionForCamera = async () => {
     const sessionUrl = await mediaSessionService.getMediaSessionUrl()
     mediaSessionUrl.value = sessionUrl
     
-    // Step 3: Get the feeds to obtain the multipartUrl for live streaming
-    const authStore = useAuthStore()
-    const baseUrl = authStore.baseUrl
+    // Step 3: Get the multipartUrl for live streaming using feeds service
+    const multipartUrl = await feedsService.getMultipartUrl(cameraId, 'preview')
     
-    const feedsResponse = await fetch(`${baseUrl}/api/v3.0/feeds?deviceId=${cameraId}&include=multipartUrl`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${authStore.token}`
-      }
-    })
-    
-    if (!feedsResponse.ok) {
-      throw new Error(`Failed to get feeds: ${feedsResponse.status} ${feedsResponse.statusText}`)
-    }
-    
-    const feedsData = await feedsResponse.json()
-    console.log('Feeds response:', feedsData)
-    
-    // Find the preview feed with multipartUrl
-    const previewFeed = feedsData.results?.find(feed => feed.type === 'preview' && feed.multipartUrl)
-    
-    if (previewFeed && previewFeed.multipartUrl) {
-      mediaSessionImageUrl.value = previewFeed.multipartUrl
-      console.log('Using multipart URL:', previewFeed.multipartUrl)
+    if (multipartUrl) {
+      mediaSessionImageUrl.value = multipartUrl
+      console.log('Using multipart URL:', multipartUrl)
     } else {
       throw new Error('No preview multipart URL found for this camera')
     }
