@@ -61,18 +61,18 @@
                 </div>
 
                 <!-- Camera Image -->
-                <div v-if="cameraImage" class="text-center">
-                  <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Live Image</h5>
+                <div v-if="multipartUrl" class="text-center">
+                  <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Live Stream</h5>
                   <div class="inline-block border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
                     <img
-                      :src="cameraImage"
-                      :alt="cameraInfo?.name || 'Camera Image'"
+                      :src="multipartUrl"
+                      :alt="cameraInfo?.name || 'Camera Stream'"
                       class="max-w-full h-auto"
                       style="max-height: 400px;"
                     />
                   </div>
-                  <p v-if="imageTimestamp" class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    Captured: {{ formatTimestamp(imageTimestamp) }}
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    Status: {{ streamStatus }}
                   </p>
                 </div>
 
@@ -148,6 +148,7 @@ import { useAuthStore } from '../stores/auth'
 import { APP_NAME } from '../constants'
 import { cameraService } from '../services/cameras'
 import { mediaService } from '../services/media'
+import { mediaSessionService } from '../services/mediaSession'
 import { sensorService } from '../services/sensors'
 
 // We import auth store for potential future use but don't use it directly yet
@@ -159,13 +160,13 @@ const cameraId = ref('1005963a')
 const loading = ref(false)
 const error = ref('')
 const cameraInfo = ref(null)
-const cameraImage = ref(null)
-const imageTimestamp = ref(null)
+const multipartUrl = ref(null)
+const streamStatus = ref('Stopped')
 const sensors = ref([])
 const sensorsLoading = ref(false)
 const sensorsError = ref('')
 
-// Load camera information and image
+// Load camera information and get multipart URL
 const loadCamera = async () => {
   if (!cameraId.value.trim()) {
     error.value = 'Please enter a camera ID'
@@ -175,25 +176,51 @@ const loadCamera = async () => {
   loading.value = true
   error.value = ''
   cameraInfo.value = null
-  cameraImage.value = null
-  imageTimestamp.value = null
+  multipartUrl.value = null
+  streamStatus.value = 'Loading...'
 
   try {
     // Get camera information
     const camera = await cameraService.getCameraById(cameraId.value.trim())
     cameraInfo.value = camera
 
-    // Get live image
-    const imageResult = await mediaService.getLiveImage(cameraId.value.trim())
-    if (imageResult.image) {
-      cameraImage.value = imageResult.image
-      imageTimestamp.value = imageResult.timestamp
+    // Step 1: Initialize the media session cookie
+    await mediaSessionService.initializeMediaSession()
+    
+    // Step 2: Get the feeds to obtain the multipartUrl for live streaming
+    const authStore = useAuthStore()
+    const baseUrl = authStore.baseUrl
+    
+    const feedsResponse = await fetch(`${baseUrl}/api/v3.0/feeds?deviceId=${cameraId.value.trim()}&include=multipartUrl`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    })
+    
+    if (!feedsResponse.ok) {
+      throw new Error(`Failed to get feeds: ${feedsResponse.status} ${feedsResponse.statusText}`)
+    }
+    
+    const feedsData = await feedsResponse.json()
+    console.log('Feeds response:', feedsData)
+    
+    // Find the preview feed with multipartUrl
+    const previewFeed = feedsData.results?.find(feed => feed.type === 'preview' && feed.multipartUrl)
+    
+    if (previewFeed && previewFeed.multipartUrl) {
+      multipartUrl.value = previewFeed.multipartUrl
+      console.log('Using multipart URL:', previewFeed.multipartUrl)
+      streamStatus.value = 'Live'
     } else {
-      error.value = 'Failed to load camera image'
+      error.value = 'No preview multipart URL found for this camera'
+      streamStatus.value = 'Error'
     }
   } catch (err) {
     console.error('Error loading camera:', err)
     error.value = err.message || 'Failed to load camera information'
+    streamStatus.value = 'Error'
   } finally {
     loading.value = false
   }

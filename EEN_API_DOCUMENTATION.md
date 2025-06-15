@@ -1,7 +1,7 @@
 # EEN API Documentation
 
 This document provides comprehensive documentation for the EEN (Eagle Eye Networks) API services used in the application. Pleas note that there is a version of this EEN Login application that shows more details 
-and practial examples [here](https://github.com/klaushofrichter/een-playground).
+and practial examples [here](https://github.com/klaushofrichter/een-playgroundimage.png).
 
 ## Table of Contents
 - [Camera Service](#camera-service)
