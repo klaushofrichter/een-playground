@@ -107,6 +107,102 @@
                   </div>
                 </div>
               </div>
+
+              <!-- Media Session Demo Section (for first camera) -->
+              <div v-if="cameras.length > 0 && !camerasLoading" class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                <div class="flex items-center justify-between mb-4">
+                  <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100">Media Session Demo</h4>
+                  <div class="flex items-center space-x-3">
+                    <div class="flex items-center space-x-2">
+                      <label for="cameraId" class="text-sm text-gray-700 dark:text-gray-300">Camera ID:</label>
+                      <input
+                        id="cameraId"
+                        v-model="selectedCameraId"
+                        type="text"
+                        maxlength="10"
+                        placeholder="1005963a"
+                        class="w-24 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      />
+                    </div>
+                    <button
+                      @click="initializeMediaSessionForCamera"
+                      :disabled="loadingMediaSession || !selectedCameraId.trim()"
+                      class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {{ loadingMediaSession ? 'Initializing...' : 'Initialize Media Session' }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Media Session Error Display -->
+                <div v-if="mediaSessionError" class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                  <p class="text-sm text-red-700 dark:text-red-400">{{ mediaSessionError }}</p>
+                </div>
+
+                <!-- Media Session Success -->
+                <div v-if="mediaSessionUrl && !mediaSessionError" class="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+                  <p class="text-sm text-green-700 dark:text-green-400">
+                    ✅ Media session initialized successfully for camera: <strong>{{ selectedCameraId }}</strong>
+                  </p>
+                  <p class="text-xs text-green-600 dark:text-green-300 mt-1 font-mono break-all">
+                    Session URL: {{ mediaSessionUrl }}
+                  </p>
+                </div>
+
+                <!-- Media Session Image Display -->
+                <div v-if="mediaSessionImageUrl" class="space-y-4">
+                  <div class="flex items-center justify-between">
+                    <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Session-Based Live Camera Feed
+                    </h5>
+                    <div class="flex items-center space-x-2">
+                      <div class="flex items-center space-x-1">
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="text-xs text-gray-600 dark:text-gray-400">Auto-updating</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="relative bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+                    <!-- Media session demonstration image -->
+                    <img
+                      :src="mediaSessionImageUrl"
+                      alt="Media Session Demo Image"
+                      class="w-full h-64 object-cover"
+                      @load="onMediaSessionImageLoad"
+                      @error="onMediaSessionImageError"
+                    />
+                    
+                    <!-- Live indicator -->
+                    <div class="absolute top-2 right-2">
+                      <div class="flex items-center space-x-1 bg-black bg-opacity-50 rounded px-2 py-1">
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="text-white text-xs">LIVE</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="text-xs text-gray-500 dark:text-gray-400">
+                    <p>💡 This demonstrates that the media session cookie is established. The session URL can be used to set up cookie-based authentication for direct media access in video players or other applications.</p>
+                    <p class="mt-2 font-mono text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded break-all">
+                      Session URL: {{ mediaSessionUrl }}
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Instructions when not initialized -->
+                <div v-else-if="!loadingMediaSession" class="text-center py-6">
+                  <div class="text-gray-500 dark:text-gray-400">
+                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 002 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Media Session Demo</h5>
+                    <p class="text-sm">
+                      Click "Initialize Media Session" to demonstrate session-based media authentication using the first camera.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -423,11 +519,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { cameraService } from '../services/cameras'
 import { mediaService } from '../services/media'
+import { mediaSessionService } from '../services/mediaSession'
 import {
   Chart,
   CategoryScale,
@@ -484,6 +581,15 @@ const metricsData = ref(null)
 const metricsChart = ref(null)
 const showMetricsChart = ref(false)
 
+// Media session data
+const loadingMediaSession = ref(false)
+const mediaSessionError = ref('')
+const mediaSessionUrl = ref(null)
+const selectedCameraId = ref('')
+
+// Media session data for demo
+const mediaSessionImageUrl = ref(null)
+
 // Load cameras from the API
 const loadCameras = async () => {
   camerasLoading.value = true
@@ -496,6 +602,11 @@ const loadCameras = async () => {
     const camerasResponse = await cameraService.listCameras()
     console.log('Camera API response:', camerasResponse)
     cameras.value = camerasResponse.results || []
+    
+    // Auto-populate the camera ID field with the first camera's ID
+    if (cameras.value.length > 0 && !selectedCameraId.value) {
+      selectedCameraId.value = cameras.value[0].id
+    }
   } catch (err) {
     console.error('Error loading cameras:', err)
     console.error('Full error details:', {
@@ -898,8 +1009,83 @@ const rebootCamera = async () => {
   }
 }
 
+
+
+// Initialize media session for selected camera
+const initializeMediaSessionForCamera = async () => {
+  if (!selectedCameraId.value.trim()) {
+    mediaSessionError.value = 'Please enter a camera ID'
+    return
+  }
+
+  const cameraId = selectedCameraId.value.trim()
+  loadingMediaSession.value = true
+  mediaSessionError.value = ''
+  mediaSessionUrl.value = null
+
+  try {
+    console.log('Initializing media session for camera:', cameraId)
+    
+    // Step 1: Initialize the media session cookie
+    await mediaSessionService.initializeMediaSession()
+    
+    // Step 2: Get the session URL for reference
+    const sessionUrl = await mediaSessionService.getMediaSessionUrl()
+    mediaSessionUrl.value = sessionUrl
+    
+    // Step 3: Get the feeds to obtain the multipartUrl for live streaming
+    const authStore = useAuthStore()
+    const baseUrl = authStore.baseUrl
+    
+    const feedsResponse = await fetch(`${baseUrl}/api/v3.0/feeds?deviceId=${cameraId}&include=multipartUrl`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    })
+    
+    if (!feedsResponse.ok) {
+      throw new Error(`Failed to get feeds: ${feedsResponse.status} ${feedsResponse.statusText}`)
+    }
+    
+    const feedsData = await feedsResponse.json()
+    console.log('Feeds response:', feedsData)
+    
+    // Find the preview feed with multipartUrl
+    const previewFeed = feedsData.results?.find(feed => feed.type === 'preview' && feed.multipartUrl)
+    
+    if (previewFeed && previewFeed.multipartUrl) {
+      mediaSessionImageUrl.value = previewFeed.multipartUrl
+      console.log('Using multipart URL:', previewFeed.multipartUrl)
+    } else {
+      throw new Error('No preview multipart URL found for this camera')
+    }
+    
+    console.log('Media session initialized successfully - session cookie established')
+  } catch (err) {
+    console.error('Error initializing media session:', err)
+    mediaSessionError.value = err.message || 'Failed to initialize media session'
+  } finally {
+    loadingMediaSession.value = false
+  }
+}
+
+// Handle media session image load
+const onMediaSessionImageLoad = () => {
+  console.log('Direct media stream loaded successfully')
+}
+
+// Handle media session image error
+const onMediaSessionImageError = (event) => {
+  console.error('Direct media stream failed to load:', event)
+  mediaSessionError.value = 'Failed to load direct media stream'
+}
+
 // Load cameras when component is mounted
 onMounted(() => {
   loadCameras()
 })
+
+
 </script> 
