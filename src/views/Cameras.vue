@@ -153,48 +153,39 @@
                 <div v-if="mediaSessionImageUrl" class="space-y-4">
                   <div class="flex items-center justify-between">
                     <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Session-Based Media Stream (First Camera)
+                      Session-Based Live Camera Feed
                     </h5>
-                    <button
-                      @click="refreshMediaSessionImage"
-                      :disabled="loadingMediaSessionImage"
-                      class="px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                    >
-                      {{ loadingMediaSessionImage ? 'Loading...' : 'Refresh' }}
-                    </button>
+                    <div class="flex items-center space-x-2">
+                      <div class="flex items-center space-x-1">
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="text-xs text-gray-600 dark:text-gray-400">Auto-updating</span>
+                      </div>
+                    </div>
                   </div>
                   
                   <div class="relative bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
-                    <!-- Loading overlay -->
-                    <div v-if="loadingMediaSessionImage" class="absolute inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-10">
-                      <div class="text-white text-sm">Loading media session image...</div>
-                    </div>
-                    
-                    <!-- Media session image -->
+                    <!-- Media session demonstration image -->
                     <img
                       :src="mediaSessionImageUrl"
-                      alt="Media Session Image"
+                      alt="Media Session Demo Image"
                       class="w-full h-64 object-cover"
                       @load="onMediaSessionImageLoad"
                       @error="onMediaSessionImageError"
-                      :class="{ 'opacity-50': loadingMediaSessionImage }"
                     />
                     
-                    <!-- Image info overlay -->
-                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3">
-                      <p class="text-white text-xs">
-                        📷 Live Image (Preview) - Session Cookie Auth
-                      </p>
-                      <p v-if="mediaSessionImageTimestamp" class="text-white text-xs opacity-75">
-                        Live capture: {{ formatTimestamp(mediaSessionImageTimestamp) }}
-                      </p>
+                    <!-- Live indicator -->
+                    <div class="absolute top-2 right-2">
+                      <div class="flex items-center space-x-1 bg-black bg-opacity-50 rounded px-2 py-1">
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="text-white text-xs">LIVE</span>
+                      </div>
                     </div>
                   </div>
                   
                   <div class="text-xs text-gray-500 dark:text-gray-400">
-                    <p>💡 This image demonstrates that the media session is active. In a real scenario, you would use the session URL for direct live image access:</p>
+                    <p>💡 This demonstrates that the media session cookie is established. The session URL can be used to set up cookie-based authentication for direct media access in video players or other applications.</p>
                     <p class="mt-2 font-mono text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded break-all">
-                      Example: {{ mediaSessionUrl }}/media/liveImage.jpeg?deviceId={{ selectedCameraId }}&amp;type=preview
+                      Session URL: {{ mediaSessionUrl }}
                     </p>
                   </div>
                 </div>
@@ -528,7 +519,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { cameraService } from '../services/cameras'
@@ -594,10 +585,10 @@ const showMetricsChart = ref(false)
 const loadingMediaSession = ref(false)
 const mediaSessionError = ref('')
 const mediaSessionUrl = ref(null)
-const mediaSessionImageUrl = ref(null)
-const mediaSessionImageTimestamp = ref(null)
-const loadingMediaSessionImage = ref(false)
 const selectedCameraId = ref('')
+
+// Media session data for demo
+const mediaSessionImageUrl = ref(null)
 
 // Load cameras from the API
 const loadCameras = async () => {
@@ -1018,6 +1009,8 @@ const rebootCamera = async () => {
   }
 }
 
+
+
 // Initialize media session for selected camera
 const initializeMediaSessionForCamera = async () => {
   if (!selectedCameraId.value.trim()) {
@@ -1029,7 +1022,6 @@ const initializeMediaSessionForCamera = async () => {
   loadingMediaSession.value = true
   mediaSessionError.value = ''
   mediaSessionUrl.value = null
-  mediaSessionImageUrl.value = null
 
   try {
     console.log('Initializing media session for camera:', cameraId)
@@ -1041,17 +1033,36 @@ const initializeMediaSessionForCamera = async () => {
     const sessionUrl = await mediaSessionService.getMediaSessionUrl()
     mediaSessionUrl.value = sessionUrl
     
-    // Step 3: Get a live preview image to demonstrate the session is working
-    // In a real scenario, you would use the session cookie for direct media URLs
-    const liveImageResult = await mediaService.getLiveImage(cameraId, 'preview')
-    if (liveImageResult.image) {
-      mediaSessionImageUrl.value = liveImageResult.image
-      mediaSessionImageTimestamp.value = liveImageResult.timestamp
-    } else {
-      throw new Error('No live image available for this camera')
+    // Step 3: Get the feeds to obtain the multipartUrl for live streaming
+    const authStore = useAuthStore()
+    const baseUrl = authStore.baseUrl
+    
+    const feedsResponse = await fetch(`${baseUrl}/api/v3.0/feeds?deviceId=${cameraId}&include=multipartUrl`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    })
+    
+    if (!feedsResponse.ok) {
+      throw new Error(`Failed to get feeds: ${feedsResponse.status} ${feedsResponse.statusText}`)
     }
     
-    console.log('Media session initialized successfully')
+    const feedsData = await feedsResponse.json()
+    console.log('Feeds response:', feedsData)
+    
+    // Find the preview feed with multipartUrl
+    const previewFeed = feedsData.results?.find(feed => feed.type === 'preview' && feed.multipartUrl)
+    
+    if (previewFeed && previewFeed.multipartUrl) {
+      mediaSessionImageUrl.value = previewFeed.multipartUrl
+      console.log('Using multipart URL:', previewFeed.multipartUrl)
+    } else {
+      throw new Error('No preview multipart URL found for this camera')
+    }
+    
+    console.log('Media session initialized successfully - session cookie established')
   } catch (err) {
     console.error('Error initializing media session:', err)
     mediaSessionError.value = err.message || 'Failed to initialize media session'
@@ -1060,45 +1071,21 @@ const initializeMediaSessionForCamera = async () => {
   }
 }
 
-// Refresh media session image
-const refreshMediaSessionImage = async () => {
-  if (!selectedCameraId.value.trim() || !mediaSessionUrl.value) {
-    return
-  }
-
-  const cameraId = selectedCameraId.value.trim()
-  loadingMediaSessionImage.value = true
-
-  try {
-    // Get a fresh live preview image
-    const liveImageResult = await mediaService.getLiveImage(cameraId, 'preview')
-    if (liveImageResult.image) {
-      mediaSessionImageUrl.value = liveImageResult.image
-      mediaSessionImageTimestamp.value = liveImageResult.timestamp
-    }
-  } catch (err) {
-    console.error('Error refreshing media session image:', err)
-    mediaSessionError.value = 'Failed to refresh image: ' + err.message
-  } finally {
-    loadingMediaSessionImage.value = false
-  }
-}
-
 // Handle media session image load
 const onMediaSessionImageLoad = () => {
-  loadingMediaSessionImage.value = false
-  console.log('Media session image loaded successfully')
+  console.log('Direct media stream loaded successfully')
 }
 
 // Handle media session image error
 const onMediaSessionImageError = (event) => {
-  loadingMediaSessionImage.value = false
-  console.error('Media session image failed to load:', event)
-  mediaSessionError.value = 'Failed to load media session image'
+  console.error('Direct media stream failed to load:', event)
+  mediaSessionError.value = 'Failed to load direct media stream'
 }
 
 // Load cameras when component is mounted
 onMounted(() => {
   loadCameras()
 })
+
+
 </script> 
