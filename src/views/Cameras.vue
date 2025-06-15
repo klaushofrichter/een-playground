@@ -107,6 +107,111 @@
                   </div>
                 </div>
               </div>
+
+              <!-- Media Session Demo Section (for first camera) -->
+              <div v-if="cameras.length > 0 && !camerasLoading" class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                <div class="flex items-center justify-between mb-4">
+                  <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100">Media Session Demo</h4>
+                  <div class="flex items-center space-x-3">
+                    <div class="flex items-center space-x-2">
+                      <label for="cameraId" class="text-sm text-gray-700 dark:text-gray-300">Camera ID:</label>
+                      <input
+                        id="cameraId"
+                        v-model="selectedCameraId"
+                        type="text"
+                        maxlength="10"
+                        placeholder="1005963a"
+                        class="w-24 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      />
+                    </div>
+                    <button
+                      @click="initializeMediaSessionForCamera"
+                      :disabled="loadingMediaSession || !selectedCameraId.trim()"
+                      class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {{ loadingMediaSession ? 'Initializing...' : 'Initialize Media Session' }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Media Session Error Display -->
+                <div v-if="mediaSessionError" class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                  <p class="text-sm text-red-700 dark:text-red-400">{{ mediaSessionError }}</p>
+                </div>
+
+                <!-- Media Session Success -->
+                <div v-if="mediaSessionUrl && !mediaSessionError" class="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+                  <p class="text-sm text-green-700 dark:text-green-400">
+                    ✅ Media session initialized successfully for camera: <strong>{{ selectedCameraId }}</strong>
+                  </p>
+                  <p class="text-xs text-green-600 dark:text-green-300 mt-1 font-mono break-all">
+                    Session URL: {{ mediaSessionUrl }}
+                  </p>
+                </div>
+
+                <!-- Media Session Image Display -->
+                <div v-if="mediaSessionImageUrl" class="space-y-4">
+                  <div class="flex items-center justify-between">
+                    <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Session-Based Media Stream (First Camera)
+                    </h5>
+                    <button
+                      @click="refreshMediaSessionImage"
+                      :disabled="loadingMediaSessionImage"
+                      class="px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                    >
+                      {{ loadingMediaSessionImage ? 'Loading...' : 'Refresh' }}
+                    </button>
+                  </div>
+                  
+                  <div class="relative bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+                    <!-- Loading overlay -->
+                    <div v-if="loadingMediaSessionImage" class="absolute inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-10">
+                      <div class="text-white text-sm">Loading media session image...</div>
+                    </div>
+                    
+                    <!-- Media session image -->
+                    <img
+                      :src="mediaSessionImageUrl"
+                      alt="Media Session Image"
+                      class="w-full h-64 object-cover"
+                      @load="onMediaSessionImageLoad"
+                      @error="onMediaSessionImageError"
+                      :class="{ 'opacity-50': loadingMediaSessionImage }"
+                    />
+                    
+                    <!-- Image info overlay -->
+                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3">
+                      <p class="text-white text-xs">
+                        📷 Live Image (Preview) - Session Cookie Auth
+                      </p>
+                      <p v-if="mediaSessionImageTimestamp" class="text-white text-xs opacity-75">
+                        Live capture: {{ formatTimestamp(mediaSessionImageTimestamp) }}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div class="text-xs text-gray-500 dark:text-gray-400">
+                    <p>💡 This image demonstrates that the media session is active. In a real scenario, you would use the session URL for direct live image access:</p>
+                    <p class="mt-2 font-mono text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded break-all">
+                      Example: {{ mediaSessionUrl }}/media/liveImage.jpeg?deviceId={{ selectedCameraId }}&amp;type=preview
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Instructions when not initialized -->
+                <div v-else-if="!loadingMediaSession" class="text-center py-6">
+                  <div class="text-gray-500 dark:text-gray-400">
+                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 002 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Media Session Demo</h5>
+                    <p class="text-sm">
+                      Click "Initialize Media Session" to demonstrate session-based media authentication using the first camera.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -428,6 +533,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { cameraService } from '../services/cameras'
 import { mediaService } from '../services/media'
+import { mediaSessionService } from '../services/mediaSession'
 import {
   Chart,
   CategoryScale,
@@ -484,6 +590,15 @@ const metricsData = ref(null)
 const metricsChart = ref(null)
 const showMetricsChart = ref(false)
 
+// Media session data
+const loadingMediaSession = ref(false)
+const mediaSessionError = ref('')
+const mediaSessionUrl = ref(null)
+const mediaSessionImageUrl = ref(null)
+const mediaSessionImageTimestamp = ref(null)
+const loadingMediaSessionImage = ref(false)
+const selectedCameraId = ref('')
+
 // Load cameras from the API
 const loadCameras = async () => {
   camerasLoading.value = true
@@ -496,6 +611,11 @@ const loadCameras = async () => {
     const camerasResponse = await cameraService.listCameras()
     console.log('Camera API response:', camerasResponse)
     cameras.value = camerasResponse.results || []
+    
+    // Auto-populate the camera ID field with the first camera's ID
+    if (cameras.value.length > 0 && !selectedCameraId.value) {
+      selectedCameraId.value = cameras.value[0].id
+    }
   } catch (err) {
     console.error('Error loading cameras:', err)
     console.error('Full error details:', {
@@ -896,6 +1016,85 @@ const rebootCamera = async () => {
   } finally {
     loadingReboot.value = false
   }
+}
+
+// Initialize media session for selected camera
+const initializeMediaSessionForCamera = async () => {
+  if (!selectedCameraId.value.trim()) {
+    mediaSessionError.value = 'Please enter a camera ID'
+    return
+  }
+
+  const cameraId = selectedCameraId.value.trim()
+  loadingMediaSession.value = true
+  mediaSessionError.value = ''
+  mediaSessionUrl.value = null
+  mediaSessionImageUrl.value = null
+
+  try {
+    console.log('Initializing media session for camera:', cameraId)
+    
+    // Step 1: Initialize the media session cookie
+    await mediaSessionService.initializeMediaSession()
+    
+    // Step 2: Get the session URL for reference
+    const sessionUrl = await mediaSessionService.getMediaSessionUrl()
+    mediaSessionUrl.value = sessionUrl
+    
+    // Step 3: Get a live preview image to demonstrate the session is working
+    // In a real scenario, you would use the session cookie for direct media URLs
+    const liveImageResult = await mediaService.getLiveImage(cameraId, 'preview')
+    if (liveImageResult.image) {
+      mediaSessionImageUrl.value = liveImageResult.image
+      mediaSessionImageTimestamp.value = liveImageResult.timestamp
+    } else {
+      throw new Error('No live image available for this camera')
+    }
+    
+    console.log('Media session initialized successfully')
+  } catch (err) {
+    console.error('Error initializing media session:', err)
+    mediaSessionError.value = err.message || 'Failed to initialize media session'
+  } finally {
+    loadingMediaSession.value = false
+  }
+}
+
+// Refresh media session image
+const refreshMediaSessionImage = async () => {
+  if (!selectedCameraId.value.trim() || !mediaSessionUrl.value) {
+    return
+  }
+
+  const cameraId = selectedCameraId.value.trim()
+  loadingMediaSessionImage.value = true
+
+  try {
+    // Get a fresh live preview image
+    const liveImageResult = await mediaService.getLiveImage(cameraId, 'preview')
+    if (liveImageResult.image) {
+      mediaSessionImageUrl.value = liveImageResult.image
+      mediaSessionImageTimestamp.value = liveImageResult.timestamp
+    }
+  } catch (err) {
+    console.error('Error refreshing media session image:', err)
+    mediaSessionError.value = 'Failed to refresh image: ' + err.message
+  } finally {
+    loadingMediaSessionImage.value = false
+  }
+}
+
+// Handle media session image load
+const onMediaSessionImageLoad = () => {
+  loadingMediaSessionImage.value = false
+  console.log('Media session image loaded successfully')
+}
+
+// Handle media session image error
+const onMediaSessionImageError = (event) => {
+  loadingMediaSessionImage.value = false
+  console.error('Media session image failed to load:', event)
+  mediaSessionError.value = 'Failed to load media session image'
 }
 
 // Load cameras when component is mounted
