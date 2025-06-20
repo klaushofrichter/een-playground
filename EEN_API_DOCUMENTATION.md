@@ -7,7 +7,7 @@ details and official information from the original source. The documentation her
 independently and is not maintained or endorsed by Eagle Eye Networks. 
 
 Please note that there is a version of this EEN Login application that shows more details 
-and practial examples [here](https://github.com/klaushofrichter/een-playgroundimage.png).
+and practial examples [here](https://github.com/klaushofrichter/een-playground).
 
 ## Table of Contents
 - [Camera Service](#camera-service)
