@@ -159,10 +159,12 @@
                        @click="switchToLivePlayer"
                        title="Click to switch to high quality live video player">
                     <img
+                      ref="previewImage"
                       :src="multipartUrl"
                       :alt="cameraInfo?.name || 'Camera Stream'"
                       class="max-w-full h-auto block"
                       style="max-height: 400px;"
+                      @load="captureImageDimensions"
                     />
                     <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-20 transition-all">
                       <div class="text-white text-sm font-medium opacity-0 hover:opacity-100 transition-opacity">
@@ -173,14 +175,14 @@
 
                   <!-- Live Player Video (when showing live player) -->
                   <div v-else class="relative inline-block border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-black"
-                       style="max-width: 100%; max-height: 500px;">
+                       :style="{ maxWidth: '100%', maxHeight: '400px', width: videoDimensions.width ? `${videoDimensions.width}px` : 'auto', height: videoDimensions.height ? `${videoDimensions.height}px` : 'auto' }">
                     <video 
                       id="livePlayerVideo" 
                       autoplay 
                       muted 
                       controls
-                      class="max-w-full h-auto block"
-                      style="max-height: 500px;"
+                      class="w-full h-full object-contain"
+                      :style="{ maxHeight: '400px' }"
                       @error="handleVideoError"
                     />
                     
@@ -326,6 +328,8 @@ const showLivePlayer = ref(false)
 const livePlayerError = ref('')
 const livePlayerLoading = ref(false)
 const livePlayerConnected = ref(false)
+const videoDimensions = ref({ width: 0, height: 0 })
+const previewImage = ref(null)
 let livePlayerInstance = null
 
 // Load camera information and get multipart URL
@@ -429,11 +433,24 @@ const formatTimestamp = (timestamp) => {
   }
 }
 
+const captureImageDimensions = () => {
+  // Capture the actual rendered dimensions of the preview image
+  if (previewImage.value) {
+    videoDimensions.value = {
+      width: previewImage.value.offsetWidth,
+      height: previewImage.value.offsetHeight
+    }
+  }
+}
+
 const switchToLivePlayer = async () => {
   if (!cameraId.value || !authStore.token) {
     livePlayerError.value = 'Camera ID and authentication token are required'
     return
   }
+
+  // Capture current image dimensions before switching
+  captureImageDimensions()
 
   showLivePlayer.value = true
   
@@ -458,6 +475,8 @@ const switchToPreview = () => {
   showLivePlayer.value = false
   livePlayerConnected.value = false
   livePlayerError.value = ''
+  // Reset dimensions so they get recaptured when needed
+  videoDimensions.value = { width: 0, height: 0 }
 }
 
 const initializeLivePlayer = async () => {
