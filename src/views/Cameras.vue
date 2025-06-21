@@ -151,11 +151,19 @@
                       />
                     </div>
                     <button
+                      v-if="!showLivePlayer"
                       @click="initializeMediaSessionForCamera"
-                      :disabled="loadingMediaSession || !selectedCameraId.trim()"
-                      class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      :disabled="loadingMediaSession || livePlayerLoading || !selectedCameraId.trim()"
+                      class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {{ loadingMediaSession ? 'Initializing...' : 'Initialize Media Session' }}
+                      {{ (loadingMediaSession || livePlayerLoading) ? 'Starting...' : 'Start Video' }}
+                    </button>
+                    <button
+                      v-else
+                      @click="stopLivePlayer"
+                      class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    >
+                      Stop Video
                     </button>
                   </div>
                 </div>
@@ -251,28 +259,11 @@
                       🎥 High-definition video streaming using the Eagle Eye Networks LivePlayer SDK
                     </p>
                   </div>
-                  <div class="flex items-center space-x-3">
-                    <div class="flex items-center space-x-2">
-                      <span class="text-sm text-gray-700 dark:text-gray-300">Status:</span>
-                      <span class="text-xs px-2 py-1 rounded" :class="livePlayerConnected ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'">
-                        {{ livePlayerConnected ? '🟢 Connected' : '⚪ Disconnected' }}
-                      </span>
-                    </div>
-                    <button
-                      v-if="!showLivePlayer"
-                      @click="startLivePlayer"
-                      :disabled="livePlayerLoading"
-                      class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {{ livePlayerLoading ? 'Starting...' : 'Start HD Video' }}
-                    </button>
-                    <button
-                      v-else
-                      @click="stopLivePlayer"
-                      class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                    >
-                      Stop HD Video
-                    </button>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">Status:</span>
+                    <span class="text-xs px-2 py-1 rounded" :class="livePlayerConnected ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'">
+                      {{ livePlayerConnected ? '🟢 Connected' : '⚪ Disconnected' }}
+                    </span>
                   </div>
                 </div>
 
