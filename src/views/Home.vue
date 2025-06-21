@@ -133,12 +133,31 @@
                   </p>
                 </div>
 
-                <!-- Camera Image -->
+                <!-- Camera Image/Live Player -->
                 <div v-if="multipartUrl" class="text-center">
-                  <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Live Preview Video Stream</h5>
-                  <div class="relative inline-block border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-                       @click="openLivePlayerModal"
-                       title="Click to open high quality live video player">
+                  <div class="flex items-center justify-between mb-2">
+                    <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {{ showLivePlayer ? 'Live HD Video Stream' : 'Live Preview Video Stream' }}
+                    </h5>
+                    <div class="flex gap-2">
+                      <button v-if="showLivePlayer"
+                              @click="switchToPreview"
+                              class="text-xs px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                        Back to Preview
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Error Display -->
+                  <div v-if="livePlayerError" class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                    <p class="text-sm text-red-700 dark:text-red-400">{{ livePlayerError }}</p>
+                  </div>
+                  
+                  <!-- Preview Image (when not showing live player) -->
+                  <div v-if="!showLivePlayer" 
+                       class="relative inline-block border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+                       @click="switchToLivePlayer"
+                       title="Click to switch to high quality live video player">
                     <img
                       :src="multipartUrl"
                       :alt="cameraInfo?.name || 'Camera Stream'"
@@ -151,86 +170,46 @@
                       </div>
                     </div>
                   </div>
-                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    Status: {{ streamStatus }}
-                  </p>
-                  <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                    Click on the image above to open high quality live video player
-                  </p>
-                </div>
 
-                <!-- Live Player Modal -->
-                <div v-if="showLivePlayerModal" 
-                     class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
-                     @click.self="closeLivePlayerModal">
-                  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
-                    <!-- Modal Header -->
-                    <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                      <div>
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                          Live HD Video Stream
-                        </h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">
-                          {{ cameraInfo?.name || 'Camera' }} ({{ cameraId }})
-                        </p>
-                      </div>
-                      <button @click="closeLivePlayerModal"
-                              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                      </button>
-                    </div>
+                  <!-- Live Player Video (when showing live player) -->
+                  <div v-else class="relative inline-block border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-black"
+                       style="max-width: 100%; max-height: 500px;">
+                    <video 
+                      id="livePlayerVideo" 
+                      autoplay 
+                      muted 
+                      controls
+                      class="max-w-full h-auto block"
+                      style="max-height: 500px;"
+                      @error="handleVideoError"
+                    />
                     
-                    <!-- Modal Content -->
-                    <div class="p-4">
-                      <div v-if="livePlayerError" class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
-                        <p class="text-sm text-red-700 dark:text-red-400">{{ livePlayerError }}</p>
+                    <!-- Loading Overlay -->
+                    <div v-if="livePlayerLoading" 
+                         class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75">
+                      <div class="text-white text-center">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                        <p class="text-sm">Loading HD video stream...</p>
                       </div>
-                      
-                      <!-- Video Container -->
-                      <div class="relative bg-black rounded-lg overflow-hidden" style="aspect-ratio: 16/9;">
-                        <video 
-                          id="livePlayerVideo" 
-                          autoplay 
-                          muted 
-                          controls
-                          class="w-full h-full object-contain"
-                          @error="handleVideoError"
-                        />
-                        
-                        <!-- Loading Overlay -->
-                        <div v-if="livePlayerLoading" 
-                             class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                          <div class="text-white text-center">
-                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
-                            <p class="text-sm">Loading HD video stream...</p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <!-- Stream Info -->
-                      <div class="mt-4 text-sm text-gray-600 dark:text-gray-400">
-                        <p><strong>Stream Quality:</strong> High Definition</p>
-                        <p><strong>Protocol:</strong> WebRTC/HLS</p>
-                        <p><strong>Status:</strong> <span :class="livePlayerConnected ? 'text-green-600' : 'text-red-600'">
-                          {{ livePlayerConnected ? 'Connected' : 'Disconnected' }}
-                        </span></p>
+                    </div>
+                  </div>
+
+                  <!-- Status and Controls -->
+                  <div class="mt-2 space-y-1">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                      Status: {{ showLivePlayer ? (livePlayerConnected ? 'HD Connected' : 'HD Disconnected') : streamStatus }}
+                    </p>
+                    
+                    <div v-if="showLivePlayer" class="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                      <div class="flex justify-center gap-4">
+                        <span><strong>Quality:</strong> High Definition</span>
+                        <span><strong>Protocol:</strong> WebRTC/HLS</span>
                       </div>
                     </div>
                     
-                    <!-- Modal Footer -->
-                    <div class="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
-                      <button @click="reconnectLivePlayer"
-                              :disabled="livePlayerLoading"
-                              class="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 disabled:opacity-50">
-                        Reconnect
-                      </button>
-                      <button @click="closeLivePlayerModal"
-                              class="px-4 py-2 text-sm font-medium bg-gray-600 text-white rounded hover:bg-gray-700">
-                        Close
-                      </button>
-                    </div>
+                    <p v-else class="text-xs text-blue-600 dark:text-blue-400">
+                      Click on the image above to switch to high quality live video player
+                    </p>
                   </div>
                 </div>
 
@@ -343,7 +322,7 @@ const sensorsError = ref('')
 const cameras = ref([])
 const camerasLoading = ref(false)
 const camerasError = ref('')
-const showLivePlayerModal = ref(false)
+const showLivePlayer = ref(false)
 const livePlayerError = ref('')
 const livePlayerLoading = ref(false)
 const livePlayerConnected = ref(false)
@@ -450,22 +429,22 @@ const formatTimestamp = (timestamp) => {
   }
 }
 
-const openLivePlayerModal = async () => {
+const switchToLivePlayer = async () => {
   if (!cameraId.value || !authStore.token) {
     livePlayerError.value = 'Camera ID and authentication token are required'
     return
   }
 
-  showLivePlayerModal.value = true
+  showLivePlayer.value = true
   
-  // Wait for modal to be rendered
+  // Wait for DOM to be updated
   await nextTick()
   
   // Initialize LivePlayer
   await initializeLivePlayer()
 }
 
-const closeLivePlayerModal = () => {
+const switchToPreview = () => {
   // Stop and cleanup LivePlayer
   if (livePlayerInstance) {
     try {
@@ -476,7 +455,7 @@ const closeLivePlayerModal = () => {
     livePlayerInstance = null
   }
   
-  showLivePlayerModal.value = false
+  showLivePlayer.value = false
   livePlayerConnected.value = false
   livePlayerError.value = ''
 }
@@ -545,20 +524,7 @@ const handleVideoError = (event) => {
   livePlayerConnected.value = false
 }
 
-const reconnectLivePlayer = async () => {
-  // Stop current instance
-  if (livePlayerInstance) {
-    try {
-      livePlayerInstance.stop()
-    } catch (err) {
-      console.warn('Error stopping LivePlayer during reconnect:', err)
-    }
-    livePlayerInstance = null
-  }
-  
-  // Reinitialize
-  await initializeLivePlayer()
-}
+
 
 // Cleanup function
 const cleanup = () => {
@@ -572,10 +538,11 @@ const cleanup = () => {
   }
 }
 
-// Watch for camera changes to cleanup previous instance
+// Watch for camera changes to cleanup previous instance and switch back to preview
 watch(cameraId, () => {
   if (livePlayerInstance) {
     cleanup()
+    showLivePlayer.value = false
   }
 })
 
