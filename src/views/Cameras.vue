@@ -243,7 +243,7 @@
               </div>
 
               <!-- LivePlayer Demo Section -->
-              <div v-if="selectedCameraId && mediaSessionUrl" class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+              <div v-if="cameras.length > 0 && !camerasLoading" class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                 <div class="flex items-center justify-between mb-4">
                   <div>
                     <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100">HD LivePlayer Demo</h4>
@@ -281,8 +281,8 @@
                   <p class="text-sm text-red-700 dark:text-red-400">{{ livePlayerError }}</p>
                 </div>
 
-                <!-- LivePlayer Video Container -->
-                <div v-if="showLivePlayer" class="space-y-4">
+                <!-- LivePlayer Video Container (when active) -->
+                <div v-if="showLivePlayer && selectedCameraId && mediaSessionUrl" class="space-y-4">
                   <div class="flex items-center justify-between">
                     <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100">
                       HD Live Video Stream
@@ -341,14 +341,19 @@
                 </div>
 
                 <!-- Instructions when not started -->
-                <div v-else-if="!livePlayerLoading" class="text-center py-6">
+                <div v-if="!showLivePlayer && !livePlayerLoading" class="text-center py-6">
                   <div class="text-gray-500 dark:text-gray-400">
                     <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
-                    <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">HD LivePlayer Ready</h5>
+                    <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">HD LivePlayer Demo</h5>
                     <p class="text-sm">
-                      Click "Start HD Video" to begin high-definition live streaming using the Eagle Eye Networks LivePlayer SDK.
+                      <span v-if="!selectedCameraId || !mediaSessionUrl">
+                        Select a camera above to enable high-definition live streaming using the Eagle Eye Networks LivePlayer SDK.
+                      </span>
+                      <span v-else>
+                        Click "Start HD Video" to begin high-definition live streaming using the Eagle Eye Networks LivePlayer SDK.
+                      </span>
                     </p>
                   </div>
                 </div>
