@@ -51,13 +51,27 @@
                     <div
                       v-for="camera in cameras"
                       :key="camera.id"
-                      class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow duration-200"
+                      :class="[
+                        'bg-white dark:bg-gray-800 border rounded-lg p-4 hover:shadow-md transition-all duration-200 cursor-pointer',
+                        selectedCameraId === camera.id 
+                          ? 'border-green-500 dark:border-green-400 ring-2 ring-green-200 dark:ring-green-800' 
+                          : 'border-gray-200 dark:border-gray-700'
+                      ]"
+                      @click="selectCameraForMediaSession(camera)"
                     >
-                      <div class="flex items-start justify-between">
+                                              <div class="flex items-start justify-between">
                         <div class="flex-1 min-w-0">
-                          <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate mb-2">
-                            {{ camera.name || 'Unnamed Camera' }}
-                          </h5>
+                          <div class="flex items-center space-x-2 mb-2">
+                            <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                              {{ camera.name || 'Unnamed Camera' }}
+                            </h5>
+                            <span 
+                              v-if="selectedCameraId === camera.id"
+                              class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                            >
+                              🎬 Active
+                            </span>
+                          </div>
                           <div class="space-y-1">
                             <p class="text-xs text-gray-500 dark:text-gray-400">
                               <strong>ID:</strong> {{ camera.id }}
@@ -84,9 +98,16 @@
                           <button
                             type="button"
                             @click.stop="openModal(camera)"
-                            class="w-full text-xs px-3 py-1 bg-primary-600 text-white rounded hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            class="flex-1 text-xs px-3 py-1 bg-primary-600 text-white rounded hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
                           >
-                            View Details & Live Image
+                            View Details
+                          </button>
+                          <button
+                            type="button"
+                            @click.stop="selectCameraForMediaSession(camera)"
+                            class="flex-1 text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                          >
+                            Start Playback
                           </button>
                         </div>
                       </div>
@@ -111,7 +132,12 @@
               <!-- Media Session Demo Section (for first camera) -->
               <div v-if="cameras.length > 0 && !camerasLoading" class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                 <div class="flex items-center justify-between mb-4">
-                  <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100">Media Session Demo</h4>
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100">Media Session Demo</h4>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      💡 Click on any camera card above or the "Start Playback" button to initialize media session
+                    </p>
+                  </div>
                   <div class="flex items-center space-x-3">
                     <div class="flex items-center space-x-2">
                       <label for="cameraId" class="text-sm text-gray-700 dark:text-gray-300">Camera ID:</label>
@@ -120,8 +146,8 @@
                         v-model="selectedCameraId"
                         type="text"
                         maxlength="10"
-                        placeholder="1005963a"
-                        class="w-24 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        placeholder="Select camera..."
+                        class="w-32 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500"
                       />
                     </div>
                     <button
@@ -168,7 +194,7 @@
                     <img
                       :src="mediaSessionImageUrl"
                       alt="Media Session Demo Image"
-                      class="w-full h-64 object-cover"
+                      class="w-full h-auto max-h-96 object-contain"
                       @load="onMediaSessionImageLoad"
                       @error="onMediaSessionImageError"
                     />
@@ -604,10 +630,7 @@ const loadCameras = async () => {
     console.log('Camera API response:', camerasResponse)
     cameras.value = camerasResponse.results || []
     
-    // Auto-populate the camera ID field with the first camera's ID
-    if (cameras.value.length > 0 && !selectedCameraId.value) {
-      selectedCameraId.value = cameras.value[0].id
-    }
+    // Don't auto-populate the camera ID field - only set when user actually selects a camera
   } catch (err) {
     console.error('Error loading cameras:', err)
     console.error('Full error details:', {
@@ -1011,6 +1034,15 @@ const rebootCamera = async () => {
 }
 
 
+
+// Select camera for media session and initialize
+const selectCameraForMediaSession = async (camera) => {
+  // Set the selected camera ID
+  selectedCameraId.value = camera.id
+  
+  // Initialize the media session for this camera
+  await initializeMediaSessionForCamera()
+}
 
 // Initialize media session for selected camera
 const initializeMediaSessionForCamera = async () => {
