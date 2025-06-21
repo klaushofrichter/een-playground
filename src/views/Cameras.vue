@@ -44,20 +44,43 @@
 
                 <!-- Cameras Grid -->
                 <div v-else-if="cameras.length > 0" class="space-y-4">
-                  <div class="text-sm text-gray-600 dark:text-gray-400">
-                    Found {{ cameras.length }} camera device{{ cameras.length !== 1 ? 's' : '' }}
+                  <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                      Found {{ cameras.length }} camera device{{ cameras.length !== 1 ? 's' : '' }}
+                      <span v-if="showPagination">
+                        (showing {{ (currentPage - 1) * camerasPerPage + 1 }}-{{ Math.min(currentPage * camerasPerPage, cameras.length) }})
+                      </span>
+                    </div>
+                    <!-- Page indicator when paginated -->
+                    <div v-if="showPagination" class="text-sm text-gray-500 dark:text-gray-400">
+                      Page {{ currentPage }} of {{ totalPages }}
+                    </div>
                   </div>
                   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div
-                      v-for="camera in cameras"
+                      v-for="camera in paginatedCameras"
                       :key="camera.id"
-                      class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow duration-200"
+                      :class="[
+                        'bg-white dark:bg-gray-800 border rounded-lg p-4 hover:shadow-md transition-all duration-200 cursor-pointer',
+                        selectedCameraId === camera.id 
+                          ? 'border-green-500 dark:border-green-400 ring-2 ring-green-200 dark:ring-green-800' 
+                          : 'border-gray-200 dark:border-gray-700'
+                      ]"
+                      @click="selectCameraForMediaSession(camera)"
                     >
-                      <div class="flex items-start justify-between">
+                                              <div class="flex items-start justify-between">
                         <div class="flex-1 min-w-0">
-                          <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate mb-2">
-                            {{ camera.name || 'Unnamed Camera' }}
-                          </h5>
+                          <div class="flex items-center space-x-2 mb-2">
+                            <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                              {{ camera.name || 'Unnamed Camera' }}
+                            </h5>
+                            <span 
+                              v-if="selectedCameraId === camera.id"
+                              class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                            >
+                              🎬 Active
+                            </span>
+                          </div>
                           <div class="space-y-1">
                             <p class="text-xs text-gray-500 dark:text-gray-400">
                               <strong>ID:</strong> {{ camera.id }}
@@ -84,13 +107,64 @@
                           <button
                             type="button"
                             @click.stop="openModal(camera)"
-                            class="w-full text-xs px-3 py-1 bg-primary-600 text-white rounded hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            class="flex-1 text-xs px-3 py-1 bg-primary-600 text-white rounded hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
                           >
-                            View Details & Live Image
+                            View Details
+                          </button>
+                          <button
+                            type="button"
+                            @click.stop="selectCameraForMediaSession(camera)"
+                            class="flex-1 text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                          >
+                            Start Playback
                           </button>
                         </div>
                       </div>
                     </div>
+                  </div>
+                  
+                  <!-- Pagination Controls -->
+                  <div v-if="showPagination" class="flex items-center justify-center space-x-2 mt-6">
+                    <!-- Previous button -->
+                    <button
+                      @click="prevPage"
+                      :disabled="currentPage === 1"
+                      class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                      </svg>
+                      Previous
+                    </button>
+
+                    <!-- Page numbers -->
+                    <div class="flex space-x-1">
+                      <button
+                        v-for="page in totalPages"
+                        :key="page"
+                        @click="goToPage(page)"
+                        :class="[
+                          'px-3 py-2 text-sm font-medium rounded-md',
+                          page === currentPage
+                            ? 'bg-primary-600 text-white'
+                            : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300'
+                        ]"
+                      >
+                        {{ page }}
+                      </button>
+                    </div>
+
+                    <!-- Next button -->
+                    <button
+                      @click="nextPage"
+                      :disabled="currentPage === totalPages"
+                      class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+                    >
+                      Next
+                      <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
 
@@ -108,10 +182,15 @@
                 </div>
               </div>
 
-              <!-- Media Session Demo Section (for first camera) -->
-              <div v-if="cameras.length > 0 && !camerasLoading" class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                <div class="flex items-center justify-between mb-4">
-                  <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100">Media Session Demo</h4>
+              <!-- Camera ID Entry Field -->
+              <div v-if="cameras.length > 0 && !camerasLoading" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100">Selected Camera</h4>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      💡 Click on any camera card above to auto-populate, or enter manually
+                    </p>
+                  </div>
                   <div class="flex items-center space-x-3">
                     <div class="flex items-center space-x-2">
                       <label for="cameraId" class="text-sm text-gray-700 dark:text-gray-300">Camera ID:</label>
@@ -120,17 +199,37 @@
                         v-model="selectedCameraId"
                         type="text"
                         maxlength="10"
-                        placeholder="1005963a"
-                        class="w-24 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        placeholder="Select camera..."
+                        class="w-32 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                     <button
-                      @click="initializeMediaSessionForCamera"
-                      :disabled="loadingMediaSession || !selectedCameraId.trim()"
-                      class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      v-if="!showLivePlayer"
+                      @click="startVideoFromButton"
+                      :disabled="loadingMediaSession || livePlayerLoading || !selectedCameraId.trim()"
+                      class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {{ loadingMediaSession ? 'Initializing...' : 'Initialize Media Session' }}
+                      {{ (loadingMediaSession || livePlayerLoading) ? 'Starting...' : 'Start Video' }}
                     </button>
+                    <button
+                      v-else
+                      @click="stopLivePlayer"
+                      class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    >
+                      Stop Video
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Media Session Demo Section (for first camera) -->
+              <div v-if="cameras.length > 0 && !camerasLoading" class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100">Media Session Demo</h4>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      🎞️ Session-based media authentication for multipart image streaming
+                    </p>
                   </div>
                 </div>
 
@@ -168,7 +267,7 @@
                     <img
                       :src="mediaSessionImageUrl"
                       alt="Media Session Demo Image"
-                      class="w-full h-64 object-cover"
+                      class="w-full h-auto max-h-96 object-contain"
                       @load="onMediaSessionImageLoad"
                       @error="onMediaSessionImageError"
                     />
@@ -199,6 +298,106 @@
                     <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Media Session Demo</h5>
                     <p class="text-sm">
                       Click "Initialize Media Session" to demonstrate session-based media authentication using the first camera.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- LivePlayer Demo Section -->
+              <div v-if="cameras.length > 0 && !camerasLoading" class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100">HD LivePlayer Demo</h4>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      🎥 High-definition video streaming using the Eagle Eye Networks LivePlayer SDK
+                    </p>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">Status:</span>
+                    <span class="text-xs px-2 py-1 rounded" :class="livePlayerConnected ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'">
+                      {{ livePlayerConnected ? '🟢 Connected' : '⚪ Disconnected' }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- LivePlayer Error Display -->
+                <div v-if="livePlayerError" class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                  <p class="text-sm text-red-700 dark:text-red-400">{{ livePlayerError }}</p>
+                </div>
+
+                <!-- LivePlayer Video Container (when active) -->
+                <div v-if="showLivePlayer && selectedCameraId && mediaSessionUrl" class="space-y-4">
+                  <div class="flex items-center justify-between">
+                    <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      HD Live Video Stream
+                    </h5>
+                    <div class="flex items-center space-x-2">
+                      <div v-if="livePlayerConnected" class="flex items-center space-x-1">
+                        <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                        <span class="text-xs text-gray-600 dark:text-gray-400">HD Streaming</span>
+                      </div>
+                      <div v-else-if="livePlayerLoading" class="flex items-center space-x-1">
+                        <div class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                        <span class="text-xs text-gray-600 dark:text-gray-400">Connecting...</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="relative bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+                    <!-- HD Video Player -->
+                    <video
+                      id="livePlayerVideo"
+                      autoplay
+                      muted
+                      controls
+                      class="w-full h-auto max-h-96 object-contain"
+                      @error="handleLivePlayerVideoError"
+                    />
+                    
+                    <!-- Loading overlay -->
+                    <div v-if="livePlayerLoading" class="absolute inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center">
+                      <div class="bg-white dark:bg-gray-800 rounded-lg p-4 flex items-center space-x-3">
+                        <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="text-sm text-gray-700 dark:text-gray-300">Loading HD video stream...</span>
+                      </div>
+                    </div>
+                    
+                    <!-- HD Live indicator -->
+                    <div v-if="livePlayerConnected" class="absolute top-2 right-2">
+                      <div class="flex items-center space-x-1 bg-black bg-opacity-50 rounded px-2 py-1">
+                        <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                        <span class="text-white text-xs">HD LIVE</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="text-xs text-gray-500 dark:text-gray-400">
+                    <p>🎥 This demonstrates high-definition live video streaming using the Eagle Eye Networks LivePlayer SDK. The LivePlayer provides superior video quality and performance compared to the multipart image stream above.</p>
+                    <div class="mt-2 flex items-center space-x-4 text-xs">
+                      <span class="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">Camera: {{ selectedCameraId }}</span>
+                      <span class="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">Quality: High Definition</span>
+                      <span class="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">Protocol: WebRTC/HLS</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Instructions when not started -->
+                <div v-if="!showLivePlayer && !livePlayerLoading" class="text-center py-6">
+                  <div class="text-gray-500 dark:text-gray-400">
+                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">HD LivePlayer Demo</h5>
+                    <p class="text-sm">
+                      <span v-if="!selectedCameraId || !mediaSessionUrl">
+                        Select a camera above to enable high-definition live streaming using the Eagle Eye Networks LivePlayer SDK.
+                      </span>
+                      <span v-else>
+                        Click "Start HD Video" to begin high-definition live streaming using the Eagle Eye Networks LivePlayer SDK.
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -519,13 +718,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { cameraService } from '../services/cameras'
 import { mediaService } from '../services/media'
 import { mediaSessionService } from '../services/mediaSession'
 import { feedsService } from '../services/feeds'
+import LivePlayer from '@een/live-video-web-sdk'
 import {
   Chart,
   CategoryScale,
@@ -559,10 +759,29 @@ const router = useRouter()
 // eslint-disable-next-line no-unused-vars
 const authStore = useAuthStore()
 
+// Computed properties for pagination
+const totalPages = computed(() => {
+  return Math.ceil(cameras.value.length / camerasPerPage)
+})
+
+const paginatedCameras = computed(() => {
+  const start = (currentPage.value - 1) * camerasPerPage
+  const end = start + camerasPerPage
+  return cameras.value.slice(start, end)
+})
+
+const showPagination = computed(() => {
+  return cameras.value.length > camerasPerPage
+})
+
 // Reactive data
 const cameras = ref([])
 const camerasLoading = ref(false)
 const camerasError = ref('')
+
+// Pagination data
+const currentPage = ref(1)
+const camerasPerPage = 12 // 4 rows × 3 columns = 12 cameras per page
 const selectedCamera = ref(null)
 const showModal = ref(false)
 const loadingImage = ref(false)
@@ -591,11 +810,41 @@ const selectedCameraId = ref('')
 // Media session data for demo
 const mediaSessionImageUrl = ref(null)
 
+// LivePlayer data
+const showLivePlayer = ref(false)
+const livePlayerLoading = ref(false)
+const livePlayerConnected = ref(false)
+const livePlayerError = ref('')
+let livePlayerInstance = null
+
+// Pagination functions
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+  }
+}
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
+}
+
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
+}
+
 // Load cameras from the API
 const loadCameras = async () => {
   camerasLoading.value = true
   camerasError.value = ''
-  cameras.value = []
+  
+  // Store video state before refresh
+  const wasLivePlayerActive = showLivePlayer.value
+  const currentCameraId = selectedCameraId.value
+  const wasMediaSessionActive = !!mediaSessionUrl.value
 
   try {
     // Test if the camera endpoint exists at all
@@ -604,10 +853,24 @@ const loadCameras = async () => {
     console.log('Camera API response:', camerasResponse)
     cameras.value = camerasResponse.results || []
     
-    // Auto-populate the camera ID field with the first camera's ID
-    if (cameras.value.length > 0 && !selectedCameraId.value) {
-      selectedCameraId.value = cameras.value[0].id
+    // Reset pagination to first page after refresh
+    currentPage.value = 1
+    
+    // Restore video state after refresh if it was active
+    if (wasLivePlayerActive && currentCameraId && wasMediaSessionActive) {
+      console.log('Restoring video state after camera refresh...')
+      
+      // Wait for DOM to update
+      await nextTick()
+      
+      // Check if LivePlayer needs to be restarted
+      if (!livePlayerConnected.value) {
+        console.log('Restarting LivePlayer after camera refresh...')
+        await startLivePlayer()
+      }
     }
+    
+    // Don't auto-populate the camera ID field - only set when user actually selects a camera
   } catch (err) {
     console.error('Error loading cameras:', err)
     console.error('Full error details:', {
@@ -1012,6 +1275,22 @@ const rebootCamera = async () => {
 
 
 
+// Select camera for media session and initialize
+const selectCameraForMediaSession = async (camera) => {
+  // Set the selected camera ID
+  selectedCameraId.value = camera.id
+  
+  // Initialize the media session for this camera
+  await initializeMediaSessionForCamera()
+  
+  // If media session was successful, automatically start LivePlayer
+  if (mediaSessionUrl.value && !mediaSessionError.value) {
+    // Wait a brief moment for the UI to update
+    await nextTick()
+    await startLivePlayer()
+  }
+}
+
 // Initialize media session for selected camera
 const initializeMediaSessionForCamera = async () => {
   if (!selectedCameraId.value.trim()) {
@@ -1064,9 +1343,136 @@ const onMediaSessionImageError = (event) => {
   mediaSessionError.value = 'Failed to load direct media stream'
 }
 
+// Start video from button (same as camera card click)
+const startVideoFromButton = async () => {
+  if (!selectedCameraId.value.trim()) {
+    mediaSessionError.value = 'Please enter a camera ID'
+    return
+  }
+
+  // Create a mock camera object with the selected ID
+  const mockCamera = { id: selectedCameraId.value.trim() }
+  
+  // Use the same function as camera card click
+  await selectCameraForMediaSession(mockCamera)
+}
+
+// LivePlayer functions
+const startLivePlayer = async () => {
+  if (!selectedCameraId.value || !authStore.token) {
+    livePlayerError.value = 'Camera ID and authentication token are required'
+    return
+  }
+
+  showLivePlayer.value = true
+  await nextTick()
+  await initializeLivePlayer()
+}
+
+const stopLivePlayer = () => {
+  cleanupLivePlayer()
+  showLivePlayer.value = false
+  livePlayerConnected.value = false
+  livePlayerError.value = ''
+  
+  // Reset media session state as well so it can be restarted
+  mediaSessionUrl.value = null
+  mediaSessionImageUrl.value = null
+  mediaSessionError.value = ''
+}
+
+const initializeLivePlayer = async () => {
+  livePlayerLoading.value = true
+  livePlayerError.value = ''
+  livePlayerConnected.value = false
+
+  try {
+    const videoElement = document.getElementById('livePlayerVideo')
+    if (!videoElement) {
+      throw new Error('Video element not found')
+    }
+
+    const baseUrl = authStore.baseUrl || `https://api.${authStore.subdomain}.eagleeyenetworks.com`
+    
+    const config = {
+      videoElement: videoElement,
+      cameraId: selectedCameraId.value,
+      baseUrl: baseUrl,
+      jwt: authStore.token
+    }
+
+    console.log('Initializing LivePlayer with config:', {
+      cameraId: config.cameraId,
+      baseUrl: config.baseUrl,
+      hasJWT: !!config.jwt
+    })
+
+    livePlayerInstance = new LivePlayer()
+    
+    // Set up event listeners if available
+    if (livePlayerInstance.addEventListener) {
+      livePlayerInstance.addEventListener('connected', () => {
+        console.log('LivePlayer connected')
+        livePlayerConnected.value = true
+        livePlayerLoading.value = false
+      })
+      
+      livePlayerInstance.addEventListener('disconnected', () => {
+        console.log('LivePlayer disconnected')
+        livePlayerConnected.value = false
+      })
+      
+      livePlayerInstance.addEventListener('error', (error) => {
+        console.error('LivePlayer error:', error)
+        livePlayerError.value = error.message || 'LivePlayer error occurred'
+        livePlayerConnected.value = false
+        livePlayerLoading.value = false
+      })
+    }
+
+    await livePlayerInstance.start(config)
+    
+    // If no event listeners, assume connected after start
+    if (!livePlayerInstance.addEventListener) {
+      livePlayerConnected.value = true
+      livePlayerLoading.value = false
+      console.log('LivePlayer started successfully')
+    }
+
+  } catch (err) {
+    console.error('Error initializing LivePlayer:', err)
+    livePlayerError.value = err.message || 'Failed to initialize video player'
+    livePlayerConnected.value = false
+    livePlayerLoading.value = false
+  }
+}
+
+const cleanupLivePlayer = () => {
+  if (livePlayerInstance) {
+    try {
+      livePlayerInstance.stop()
+      console.log('LivePlayer stopped')
+    } catch (err) {
+      console.warn('Error stopping LivePlayer:', err)
+    }
+    livePlayerInstance = null
+  }
+}
+
+const handleLivePlayerVideoError = (event) => {
+  console.error('Video error:', event)
+  livePlayerError.value = 'Video playback error occurred'
+  livePlayerConnected.value = false
+}
+
 // Load cameras when component is mounted
 onMounted(() => {
   loadCameras()
+})
+
+// Cleanup when component unmounts
+onBeforeUnmount(() => {
+  cleanupLivePlayer()
 })
 
 

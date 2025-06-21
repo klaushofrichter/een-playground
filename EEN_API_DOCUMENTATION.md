@@ -1,7 +1,13 @@
-# EEN API Documentation
+# Node API for the EEN API Endpoints - Documentation
 
-This document provides comprehensive documentation for the EEN (Eagle Eye Networks) API services used in the application. Pleas note that there is a version of this EEN Login application that shows more details 
-and practial examples [here](https://github.com/klaushofrichter/een-playgroundimage.png).
+This document provides comprehensive documentation for the EEN (Eagle Eye Networks) API services used in this application. Please vist the 
+[Eagle Eye Networks Developer Portal](https://developer.eagleeyenetworks.com/docs/getting-started)
+for more 
+details and official information from the original source. The documentation here was created 
+independently and is not maintained or endorsed by Eagle Eye Networks. 
+
+Please note that there is a version of this EEN Login application that shows more details 
+and practial examples [here](https://github.com/klaushofrichter/een-playground).
 
 ## Table of Contents
 - [Camera Service](#camera-service)
@@ -13,6 +19,7 @@ and practial examples [here](https://github.com/klaushofrichter/een-playgroundim
 - [Measurements Service](#measurements-service)
 - [Sensor Gateways Service](#sensor-gateways-service)
 - [Sensor Summary Service](#sensor-summary-service)
+- [LivePlayer Integration](#liveplayer-integration)
 
 ## Camera Service
 
@@ -204,7 +211,7 @@ Lists media intervals for a device with various filtering options.
 **Example:**
 ```javascript
 const mediaList = await mediaService.listMedia({
-  deviceId: 'camera123',
+  deviceId: '1005963a',
   type: 'preview',
   mediaType: 'video',
   startTimestamp__gte: '2023-01-01T00:00:00Z',
@@ -227,10 +234,12 @@ Retrieves a live image from a camera.
 
 **Example:**
 ```javascript
-const liveImage = await mediaService.getLiveImage('camera123');
+const liveImage = await mediaService.getLiveImage('1005963a');
 if (liveImage.image) {
   // Use the base64 image directly in an img tag
   document.getElementById('livePreview').src = liveImage.image;
+} else {
+  console.error('No live image available for this camera');
 }
 ```
 
@@ -261,7 +270,7 @@ Retrieves a recorded image from a camera with advanced filtering and navigation 
 ```javascript
 // Get image at specific timestamp
 const recordedImage = await mediaService.getRecordedImage({
-  deviceId: 'camera123',
+  deviceId: '1005963a',
   timestamp__gte: '2023-01-01T12:00:00Z',
   type: 'main'
 });
@@ -271,6 +280,8 @@ if (recordedImage.nextToken) {
   const nextImage = await mediaService.getRecordedImage({
     pageToken: recordedImage.nextToken
   });
+} else {
+  console.log('No more images available');
 }
 ```
 
@@ -285,7 +296,7 @@ Gets available field values for recorded images, useful for discovering availabl
 
 **Example:**
 ```javascript
-const fieldValues = await mediaService.listRecordedImageFieldValues('camera123', ['overlayId']);
+const fieldValues = await mediaService.listRecordedImageFieldValues('1005963a', ['overlayId']);
 console.log('Available overlays:', fieldValues.overlayId);
 ```
 
@@ -387,7 +398,7 @@ await mediaSessionService.initializeMediaSession();
 
 // Get media intervals
 const mediaList = await mediaService.listMedia({
-  deviceId: 'camera123',
+  deviceId: '1005963a',
   type: 'preview',
   mediaType: 'video',
   startTimestamp__gte: '2023-01-01T00:00:00Z',
@@ -432,20 +443,20 @@ Lists feeds for devices with comprehensive filtering options.
 ```javascript
 // Get all feeds for a device with streaming URLs
 const feeds = await feedsService.listFeeds({
-  deviceId: 'camera123',
+  deviceId: '1005963a',
   include: ['multipartUrl', 'flvUrl', 'hlsUrl']
 });
 
 // Filter by stream type
 const previewFeeds = await feedsService.listFeeds({
-  deviceId: 'camera123',
+  deviceId: '1005963a',
   type: 'preview',
   include: ['multipartUrl']
 });
 
 // Get feeds for multiple devices
 const multiDeviceFeeds = await feedsService.listFeeds({
-  deviceId__in: ['camera123', 'camera456'],
+  deviceId__in: ['1005963a', '1005963b'],
   include: ['multipartUrl', 'flvUrl']
 });
 ```
@@ -464,12 +475,12 @@ Convenient method to get feeds for a specific device with optional filtering.
 **Example:**
 ```javascript
 // Get all feeds for a device
-const deviceFeeds = await feedsService.getFeedsForDevice('camera123', {
+const deviceFeeds = await feedsService.getFeedsForDevice('1005963a', {
   include: ['multipartUrl', 'flvUrl']
 });
 
 // Get only preview feeds
-const previewFeeds = await feedsService.getFeedsForDevice('camera123', {
+const previewFeeds = await feedsService.getFeedsForDevice('1005963a', {
   type: 'preview',
   include: ['multipartUrl']
 });
@@ -487,14 +498,16 @@ Gets the multipart URL for live streaming from a specific device and stream type
 **Example:**
 ```javascript
 // Get preview multipart URL (most common for live viewing)
-const previewUrl = await feedsService.getMultipartUrl('camera123', 'preview');
+const previewUrl = await feedsService.getMultipartUrl('1005963a', 'preview');
 if (previewUrl) {
   // Use URL in img tag for auto-refreshing live stream
   document.getElementById('liveStream').src = previewUrl;
+} else {
+  console.error('No preview multipart URL found for this camera');
 }
 
 // Get high-quality main stream URL
-const mainUrl = await feedsService.getMultipartUrl('camera123', 'main');
+const mainUrl = await feedsService.getMultipartUrl('1005963a', 'main');
 ```
 
 #### `getAllUrls(deviceId, type = 'preview')`
@@ -519,7 +532,7 @@ Gets all available streaming URLs for a specific device and stream type.
 **Example:**
 ```javascript
 // Get all available streaming URLs
-const urls = await feedsService.getAllUrls('camera123', 'preview');
+const urls = await feedsService.getAllUrls('1005963a', 'preview');
 
 if (urls) {
   console.log('Available streaming options:');
@@ -528,10 +541,12 @@ if (urls) {
   if (urls.hlsUrl) console.log('HLS:', urls.hlsUrl);
   if (urls.rtspUrl) console.log('RTSP:', urls.rtspUrl);
   if (urls.webRtcUrl) console.log('WebRTC:', urls.webRtcUrl);
+} else {
+  console.error('No feeds found for this camera');
 }
 
 // Use the best available URL for your use case
-const streamUrl = urls.multipartUrl || urls.flvUrl || urls.hlsUrl;
+const streamUrl = urls?.multipartUrl || urls?.flvUrl || urls?.hlsUrl;
 ```
 
 ### Stream Types
@@ -582,17 +597,19 @@ The feeds service supports three main stream types:
 await mediaSessionService.initializeMediaSession();
 
 // 2. Get multipart URL for live streaming
-const liveUrl = await feedsService.getMultipartUrl('camera123', 'preview');
+const liveUrl = await feedsService.getMultipartUrl('1005963a', 'preview');
 
 // 3. Display in HTML
 if (liveUrl) {
   document.getElementById('liveCamera').src = liveUrl;
+} else {
+  console.error('No preview multipart URL found for this camera');
 }
 ```
 
 #### **Multi-Camera Dashboard**
 ```javascript
-const cameraIds = ['cam001', 'cam002', 'cam003'];
+const cameraIds = ['1005963a', '1005963b', '1005963c'];
 
 // Initialize media session once
 await mediaSessionService.initializeMediaSession();
@@ -606,6 +623,8 @@ const allUrls = await Promise.all(
 allUrls.forEach((url, index) => {
   if (url) {
     document.getElementById(`camera-${index}`).src = url;
+  } else {
+    console.error(`No multipart URL found for camera ${cameraIds[index]}`);
   }
 });
 ```
@@ -613,25 +632,97 @@ allUrls.forEach((url, index) => {
 #### **Stream Quality Selection**
 ```javascript
 // Get all available URLs for quality selection
-const urls = await feedsService.getAllUrls('camera123');
+const urls = await feedsService.getAllUrls('1005963a');
 
 // Let user choose quality
 const qualitySelect = document.getElementById('quality');
-if (urls.multipartUrl) {
+if (urls?.multipartUrl) {
   qualitySelect.innerHTML += '<option value="preview">Preview Quality</option>';
 }
 
 // Get main stream for high quality
-const mainUrls = await feedsService.getAllUrls('camera123', 'main');
-if (mainUrls.multipartUrl) {
+const mainUrls = await feedsService.getAllUrls('1005963a', 'main');
+if (mainUrls?.multipartUrl) {
   qualitySelect.innerHTML += '<option value="main">High Quality</option>';
 }
 
 // Switch quality based on selection
 qualitySelect.addEventListener('change', async (e) => {
-  const streamUrl = await feedsService.getMultipartUrl('camera123', e.target.value);
-  document.getElementById('videoPlayer').src = streamUrl;
+  const streamUrl = await feedsService.getMultipartUrl('1005963a', e.target.value);
+  if (streamUrl) {
+    document.getElementById('videoPlayer').src = streamUrl;
+  } else {
+    console.error(`No ${e.target.value} stream available for this camera`);
+  }
 });
+```
+
+#### **Complete Vue.js Application Example**
+This example shows the exact pattern used in our Home.vue component:
+
+```javascript
+// Vue.js reactive data
+const cameraId = ref('1005963a')
+const loading = ref(false)
+const error = ref('')
+const cameraInfo = ref(null)
+const multipartUrl = ref(null)
+const streamStatus = ref('Stopped')
+
+// Load camera and initialize live stream
+const loadCamera = async () => {
+  if (!cameraId.value.trim()) {
+    error.value = 'Please enter a camera ID'
+    return
+  }
+
+  loading.value = true
+  error.value = ''
+  cameraInfo.value = null
+  multipartUrl.value = null
+  streamStatus.value = 'Loading...'
+
+  try {
+    // Get camera information
+    const camera = await cameraService.getCameraById(cameraId.value.trim())
+    cameraInfo.value = camera
+
+    // Step 1: Initialize the media session cookie
+    await mediaSessionService.initializeMediaSession()
+    
+    // Step 2: Get the multipart URL using the feeds service
+    const feedMultipartUrl = await feedsService.getMultipartUrl(cameraId.value.trim(), 'preview')
+    
+    if (feedMultipartUrl) {
+      multipartUrl.value = feedMultipartUrl
+      streamStatus.value = 'Live'
+    } else {
+      error.value = 'No preview multipart URL found for this camera'
+      streamStatus.value = 'Error'
+    }
+  } catch (err) {
+    console.error('Error loading camera:', err)
+    error.value = err.message || 'Failed to load camera information'
+    streamStatus.value = 'Error'
+  } finally {
+    loading.value = false
+  }
+}
+
+// Load available cameras list
+const loadCameras = async () => {
+  try {
+    const camerasResponse = await cameraService.listCameras({
+      include: ['status'],
+      sort: ['+name'],
+      pageSize: 5
+    })
+    return camerasResponse.results || []
+  } catch (err) {
+    console.error('Error loading cameras:', err)
+    throw err
+  }
+}
 ```
 
 ## User Service
@@ -817,3 +908,332 @@ Retrieves sensor summaries visible to the current user.
   - `preferred` (boolean): If true, only preferred measurements are returned. If false, only non-preferred. If omitted, all are returned.
 
 **Returns:** Promise<Object> - Paginated response with sensor summaries 
+
+## LivePlayer Integration
+
+The LivePlayer provides high-quality live video streaming capabilities using the `@een/live-video-web-sdk` package. This integration allows seamless switching between preview images and high-definition live video streams.
+
+### Installation
+
+The LivePlayer SDK is already included in this project:
+
+```json
+"dependencies": {
+  "@een/live-video-web-sdk": "^1.9.2"
+}
+```
+
+### Basic Usage
+
+#### Import and Setup
+
+```javascript
+import LivePlayer from '@een/live-video-web-sdk'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+
+// Reactive state
+const showLivePlayer = ref(false)
+const livePlayerLoading = ref(false)
+const livePlayerConnected = ref(false)
+const livePlayerError = ref('')
+let livePlayerInstance = null
+```
+
+#### HTML Template
+
+```html
+<template>
+  <!-- Video container for LivePlayer -->
+  <div v-if="showLivePlayer" class="video-container">
+    <video 
+      id="livePlayerVideo" 
+      autoplay 
+      muted 
+      controls
+      class="w-full h-full object-contain"
+      @error="handleVideoError"
+    />
+    
+    <!-- Loading overlay -->
+    <div v-if="livePlayerLoading" class="loading-overlay">
+      <div class="loading-spinner"></div>
+      <p>Loading HD video stream...</p>
+    </div>
+  </div>
+</template>
+```
+
+#### LivePlayer Configuration
+
+```javascript
+const initializeLivePlayer = async () => {
+  livePlayerLoading.value = true
+  livePlayerError.value = ''
+  livePlayerConnected.value = false
+
+  try {
+    const videoElement = document.getElementById('livePlayerVideo')
+    if (!videoElement) {
+      throw new Error('Video element not found')
+    }
+
+    // Configuration object
+    const config = {
+      videoElement: videoElement,
+      cameraId: "1005963a", // Your camera ID
+      baseUrl: "https://api.c000.eagleeyenetworks.com", // Your EEN API base URL
+      jwt: "eyJraWQiOi..." // Your authentication JWT token
+    }
+
+    // Create and start LivePlayer instance
+    livePlayerInstance = new LivePlayer()
+    
+    // Optional: Set up event listeners
+    if (livePlayerInstance.addEventListener) {
+      livePlayerInstance.addEventListener('connected', () => {
+        livePlayerConnected.value = true
+        livePlayerLoading.value = false
+      })
+      
+      livePlayerInstance.addEventListener('disconnected', () => {
+        livePlayerConnected.value = false
+      })
+      
+      livePlayerInstance.addEventListener('error', (error) => {
+        console.error('LivePlayer error:', error)
+        livePlayerError.value = error.message || 'LivePlayer error occurred'
+        livePlayerConnected.value = false
+        livePlayerLoading.value = false
+      })
+    }
+
+    // Start the live stream
+    await livePlayerInstance.start(config)
+    
+    // If no event listeners, set connected after start
+    if (!livePlayerInstance.addEventListener) {
+      livePlayerConnected.value = true
+      livePlayerLoading.value = false
+    }
+
+  } catch (err) {
+    console.error('Error initializing LivePlayer:', err)
+    livePlayerError.value = err.message || 'Failed to initialize video player'
+    livePlayerConnected.value = false
+    livePlayerLoading.value = false
+  }
+}
+```
+
+#### Cleanup and Resource Management
+
+```javascript
+const cleanup = () => {
+  if (livePlayerInstance) {
+    try {
+      livePlayerInstance.stop()
+    } catch (err) {
+      console.warn('Error stopping LivePlayer:', err)
+    }
+    livePlayerInstance = null
+  }
+}
+
+// Cleanup when component unmounts
+onBeforeUnmount(() => {
+  cleanup()
+})
+
+// Cleanup when switching away from live player
+const switchToPreview = () => {
+  cleanup()
+  showLivePlayer.value = false
+  livePlayerConnected.value = false
+  livePlayerError.value = ''
+}
+```
+
+### Integration Example (Vue 3 Composition API)
+
+Here's a complete example of how LivePlayer is integrated in the Home.vue component:
+
+```javascript
+<template>
+  <div class="camera-viewer">
+    <!-- Preview Image (default view) -->
+    <div v-if="!showLivePlayer" 
+         class="preview-container"
+         @click="switchToLivePlayer">
+      <img :src="multipartUrl" alt="Camera Preview" />
+      <div class="click-overlay">
+        🎥 Click for HD Video
+      </div>
+    </div>
+
+    <!-- LivePlayer Video (HD view) -->
+    <div v-else class="live-player-container">
+      <video 
+        id="livePlayerVideo" 
+        autoplay 
+        muted 
+        controls
+        @error="handleVideoError"
+      />
+      
+      <div v-if="livePlayerLoading" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>Loading HD video stream...</p>
+      </div>
+      
+      <button @click="switchToPreview" class="back-button">
+        Back to Preview
+      </button>
+    </div>
+
+    <!-- Status Display -->
+    <div class="status-info">
+      <p>Status: {{ showLivePlayer ? (livePlayerConnected ? 'HD Connected' : 'HD Disconnected') : 'Preview Active' }}</p>
+      <div v-if="showLivePlayer" class="stream-info">
+        <span>Quality: High Definition</span>
+        <span>Protocol: WebRTC/HLS</span>
+      </div>
+    </div>
+
+    <!-- Error Display -->
+    <div v-if="livePlayerError" class="error-message">
+      {{ livePlayerError }}
+    </div>
+  </div>
+</template>
+
+<script setup>
+import LivePlayer from '@een/live-video-web-sdk'
+import { ref, onBeforeUnmount, nextTick } from 'vue'
+import { useAuthStore } from '../stores/auth'
+
+const authStore = useAuthStore()
+
+// Reactive state
+const showLivePlayer = ref(false)
+const livePlayerLoading = ref(false)
+const livePlayerConnected = ref(false)
+const livePlayerError = ref('')
+const multipartUrl = ref('') // From feeds service
+let livePlayerInstance = null
+
+// Switch from preview image to LivePlayer
+const switchToLivePlayer = async () => {
+  if (!cameraId.value || !authStore.token) {
+    livePlayerError.value = 'Camera ID and authentication token are required'
+    return
+  }
+
+  showLivePlayer.value = true
+  await nextTick()
+  await initializeLivePlayer()
+}
+
+// Switch back to preview image
+const switchToPreview = () => {
+  cleanup()
+  showLivePlayer.value = false
+  livePlayerConnected.value = false
+  livePlayerError.value = ''
+}
+
+// Initialize LivePlayer with authentication
+const initializeLivePlayer = async () => {
+  livePlayerLoading.value = true
+  livePlayerError.value = ''
+
+  try {
+    const videoElement = document.getElementById('livePlayerVideo')
+    const baseUrl = authStore.baseUrl || `https://api.${authStore.subdomain}.eagleeyenetworks.com`
+    
+    const config = {
+      videoElement: videoElement,
+      cameraId: cameraId.value,
+      baseUrl: baseUrl,
+      jwt: authStore.token
+    }
+
+    livePlayerInstance = new LivePlayer()
+    await livePlayerInstance.start(config)
+    
+    livePlayerConnected.value = true
+    livePlayerLoading.value = false
+  } catch (err) {
+    livePlayerError.value = err.message || 'Failed to initialize video player'
+    livePlayerLoading.value = false
+  }
+}
+
+// Cleanup resources
+const cleanup = () => {
+  if (livePlayerInstance) {
+    try {
+      livePlayerInstance.stop()
+    } catch (err) {
+      console.warn('Error stopping LivePlayer:', err)
+    }
+    livePlayerInstance = null
+  }
+}
+
+// Handle video errors
+const handleVideoError = (event) => {
+  console.error('Video error:', event)
+  livePlayerError.value = 'Video playback error occurred'
+  livePlayerConnected.value = false
+}
+
+onBeforeUnmount(() => {
+  cleanup()
+})
+</script>
+```
+
+### Configuration Options
+
+The LivePlayer accepts the following configuration options:
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `videoElement` | HTMLVideoElement | Yes | The video DOM element for playback |
+| `cameraId` | string | Yes | The EEN camera ID to stream from |
+| `baseUrl` | string | Yes | The EEN API base URL (e.g., `https://api.c000.eagleeyenetworks.com`) |
+| `jwt` | string | Yes | Valid JWT authentication token |
+
+### Event Handling
+
+The LivePlayer may support the following events (if available in your SDK version):
+
+- `connected` - Fired when the live stream connection is established
+- `disconnected` - Fired when the live stream connection is lost
+- `error` - Fired when an error occurs during streaming
+
+### Best Practices
+
+1. **Authentication**: Always ensure valid JWT tokens before initializing LivePlayer
+2. **Cleanup**: Properly stop LivePlayer instances when components unmount or switch views
+3. **Error Handling**: Implement comprehensive error handling for network and streaming issues
+4. **Loading States**: Show loading indicators while the stream initializes
+5. **Responsive Design**: Ensure video containers adapt to different screen sizes
+6. **User Experience**: Provide clear status indicators and easy navigation between views
+
+### Troubleshooting
+
+**Common Issues:**
+
+1. **Video Element Not Found**: Ensure the video element exists in DOM before initializing
+2. **Authentication Errors**: Verify JWT token is valid and not expired
+3. **Network Issues**: Check network connectivity and firewall settings
+4. **Browser Compatibility**: Ensure browser supports WebRTC and modern video codecs
+5. **Camera Offline**: Verify camera is online and accessible through EEN API
+
+**Debug Tips:**
+
+- Check browser console for detailed error messages
+- Verify camera ID is correct and accessible
+- Test authentication with other EEN API endpoints first
+- Use browser developer tools to inspect network requests

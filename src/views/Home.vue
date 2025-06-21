@@ -32,8 +32,6 @@ import { onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { APP_NAME } from '../constants'
 
-// We import auth store for potential future use but don't use it directly yet
-// eslint-disable-next-line no-unused-vars
 const authStore = useAuthStore()
 
 onMounted(() => {
