@@ -152,7 +152,7 @@
                     </div>
                     <button
                       v-if="!showLivePlayer"
-                      @click="initializeMediaSessionForCamera"
+                      @click="startVideoFromButton"
                       :disabled="loadingMediaSession || livePlayerLoading || !selectedCameraId.trim()"
                       class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -1231,6 +1231,20 @@ const onMediaSessionImageError = (event) => {
   mediaSessionError.value = 'Failed to load direct media stream'
 }
 
+// Start video from button (same as camera card click)
+const startVideoFromButton = async () => {
+  if (!selectedCameraId.value.trim()) {
+    mediaSessionError.value = 'Please enter a camera ID'
+    return
+  }
+
+  // Create a mock camera object with the selected ID
+  const mockCamera = { id: selectedCameraId.value.trim() }
+  
+  // Use the same function as camera card click
+  await selectCameraForMediaSession(mockCamera)
+}
+
 // LivePlayer functions
 const startLivePlayer = async () => {
   if (!selectedCameraId.value || !authStore.token) {
@@ -1248,6 +1262,11 @@ const stopLivePlayer = () => {
   showLivePlayer.value = false
   livePlayerConnected.value = false
   livePlayerError.value = ''
+  
+  // Reset media session state as well so it can be restarted
+  mediaSessionUrl.value = null
+  mediaSessionImageUrl.value = null
+  mediaSessionError.value = ''
 }
 
 const initializeLivePlayer = async () => {
