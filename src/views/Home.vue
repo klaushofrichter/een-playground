@@ -135,7 +135,7 @@
 
                 <!-- Camera Image -->
                 <div v-if="multipartUrl" class="text-center">
-                  <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Live Stream</h5>
+                  <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Live Preview Video Stream</h5>
                   <div class="inline-block border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
                     <img
                       :src="multipartUrl"
