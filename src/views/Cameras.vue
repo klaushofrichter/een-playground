@@ -44,12 +44,21 @@
 
                 <!-- Cameras Grid -->
                 <div v-else-if="cameras.length > 0" class="space-y-4">
-                  <div class="text-sm text-gray-600 dark:text-gray-400">
-                    Found {{ cameras.length }} camera device{{ cameras.length !== 1 ? 's' : '' }}
+                  <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                      Found {{ cameras.length }} camera device{{ cameras.length !== 1 ? 's' : '' }}
+                      <span v-if="showPagination">
+                        (showing {{ (currentPage - 1) * camerasPerPage + 1 }}-{{ Math.min(currentPage * camerasPerPage, cameras.length) }})
+                      </span>
+                    </div>
+                    <!-- Page indicator when paginated -->
+                    <div v-if="showPagination" class="text-sm text-gray-500 dark:text-gray-400">
+                      Page {{ currentPage }} of {{ totalPages }}
+                    </div>
                   </div>
                   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div
-                      v-for="camera in cameras"
+                      v-for="camera in paginatedCameras"
                       :key="camera.id"
                       :class="[
                         'bg-white dark:bg-gray-800 border rounded-lg p-4 hover:shadow-md transition-all duration-200 cursor-pointer',
@@ -112,6 +121,50 @@
                         </div>
                       </div>
                     </div>
+                  </div>
+                  
+                  <!-- Pagination Controls -->
+                  <div v-if="showPagination" class="flex items-center justify-center space-x-2 mt-6">
+                    <!-- Previous button -->
+                    <button
+                      @click="prevPage"
+                      :disabled="currentPage === 1"
+                      class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                      </svg>
+                      Previous
+                    </button>
+
+                    <!-- Page numbers -->
+                    <div class="flex space-x-1">
+                      <button
+                        v-for="page in totalPages"
+                        :key="page"
+                        @click="goToPage(page)"
+                        :class="[
+                          'px-3 py-2 text-sm font-medium rounded-md',
+                          page === currentPage
+                            ? 'bg-primary-600 text-white'
+                            : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300'
+                        ]"
+                      >
+                        {{ page }}
+                      </button>
+                    </div>
+
+                    <!-- Next button -->
+                    <button
+                      @click="nextPage"
+                      :disabled="currentPage === totalPages"
+                      class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+                    >
+                      Next
+                      <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
 
@@ -706,10 +759,29 @@ const router = useRouter()
 // eslint-disable-next-line no-unused-vars
 const authStore = useAuthStore()
 
+// Computed properties for pagination
+const totalPages = computed(() => {
+  return Math.ceil(cameras.value.length / camerasPerPage)
+})
+
+const paginatedCameras = computed(() => {
+  const start = (currentPage.value - 1) * camerasPerPage
+  const end = start + camerasPerPage
+  return cameras.value.slice(start, end)
+})
+
+const showPagination = computed(() => {
+  return cameras.value.length > camerasPerPage
+})
+
 // Reactive data
 const cameras = ref([])
 const camerasLoading = ref(false)
 const camerasError = ref('')
+
+// Pagination data
+const currentPage = ref(1)
+const camerasPerPage = 12 // 4 rows × 3 columns = 12 cameras per page
 const selectedCamera = ref(null)
 const showModal = ref(false)
 const loadingImage = ref(false)
@@ -745,6 +817,25 @@ const livePlayerConnected = ref(false)
 const livePlayerError = ref('')
 let livePlayerInstance = null
 
+// Pagination functions
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+  }
+}
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
+}
+
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
+}
+
 // Load cameras from the API
 const loadCameras = async () => {
   camerasLoading.value = true
@@ -761,6 +852,9 @@ const loadCameras = async () => {
     const camerasResponse = await cameraService.listCameras()
     console.log('Camera API response:', camerasResponse)
     cameras.value = camerasResponse.results || []
+    
+    // Reset pagination to first page after refresh
+    currentPage.value = 1
     
     // Restore video state after refresh if it was active
     if (wasLivePlayerActive && currentCameraId && wasMediaSessionActive) {
