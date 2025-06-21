@@ -1162,6 +1162,13 @@ const selectCameraForMediaSession = async (camera) => {
   
   // Initialize the media session for this camera
   await initializeMediaSessionForCamera()
+  
+  // If media session was successful, automatically start LivePlayer
+  if (mediaSessionUrl.value && !mediaSessionError.value) {
+    // Wait a brief moment for the UI to update
+    await nextTick()
+    await startLivePlayer()
+  }
 }
 
 // Initialize media session for selected camera
