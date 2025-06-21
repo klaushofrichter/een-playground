@@ -129,13 +129,13 @@
                 </div>
               </div>
 
-              <!-- Media Session Demo Section (for first camera) -->
-              <div v-if="cameras.length > 0 && !camerasLoading" class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                <div class="flex items-center justify-between mb-4">
+              <!-- Camera ID Entry Field -->
+              <div v-if="cameras.length > 0 && !camerasLoading" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
+                <div class="flex items-center justify-between">
                   <div>
-                    <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100">Media Session Demo</h4>
+                    <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100">Selected Camera</h4>
                     <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      💡 Click on any camera card above or the "Start Playback" button to initialize media session
+                      💡 Click on any camera card above to auto-populate, or enter manually
                     </p>
                   </div>
                   <div class="flex items-center space-x-3">
@@ -147,7 +147,7 @@
                         type="text"
                         maxlength="10"
                         placeholder="Select camera..."
-                        class="w-32 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        class="w-32 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                     <button
@@ -157,6 +157,18 @@
                     >
                       {{ loadingMediaSession ? 'Initializing...' : 'Initialize Media Session' }}
                     </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Media Session Demo Section (for first camera) -->
+              <div v-if="cameras.length > 0 && !camerasLoading" class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100">Media Session Demo</h4>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      🎞️ Session-based media authentication for multipart image streaming
+                    </p>
                   </div>
                 </div>
 
