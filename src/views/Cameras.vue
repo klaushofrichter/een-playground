@@ -749,7 +749,11 @@ let livePlayerInstance = null
 const loadCameras = async () => {
   camerasLoading.value = true
   camerasError.value = ''
-  cameras.value = []
+  
+  // Store video state before refresh
+  const wasLivePlayerActive = showLivePlayer.value
+  const currentCameraId = selectedCameraId.value
+  const wasMediaSessionActive = !!mediaSessionUrl.value
 
   try {
     // Test if the camera endpoint exists at all
@@ -757,6 +761,20 @@ const loadCameras = async () => {
     const camerasResponse = await cameraService.listCameras()
     console.log('Camera API response:', camerasResponse)
     cameras.value = camerasResponse.results || []
+    
+    // Restore video state after refresh if it was active
+    if (wasLivePlayerActive && currentCameraId && wasMediaSessionActive) {
+      console.log('Restoring video state after camera refresh...')
+      
+      // Wait for DOM to update
+      await nextTick()
+      
+      // Check if LivePlayer needs to be restarted
+      if (!livePlayerConnected.value) {
+        console.log('Restarting LivePlayer after camera refresh...')
+        await startLivePlayer()
+      }
+    }
     
     // Don't auto-populate the camera ID field - only set when user actually selects a camera
   } catch (err) {
