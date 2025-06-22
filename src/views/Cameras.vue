@@ -842,9 +842,8 @@ const loadCameras = async () => {
   camerasError.value = ''
   
   // Store video state before refresh
-  const wasLivePlayerActive = showLivePlayer.value
+  const wasVideoActive = showLivePlayer.value || !!mediaSessionUrl.value
   const currentCameraId = selectedCameraId.value
-  const wasMediaSessionActive = !!mediaSessionUrl.value
 
   try {
     // Test if the camera endpoint exists at all
@@ -855,20 +854,6 @@ const loadCameras = async () => {
     
     // Reset pagination to first page after refresh
     currentPage.value = 1
-    
-    // Restore video state after refresh if it was active
-    if (wasLivePlayerActive && currentCameraId && wasMediaSessionActive) {
-      console.log('Restoring video state after camera refresh...')
-      
-      // Wait for DOM to update
-      await nextTick()
-      
-      // Check if LivePlayer needs to be restarted
-      if (!livePlayerConnected.value) {
-        console.log('Restarting LivePlayer after camera refresh...')
-        await startLivePlayer()
-      }
-    }
     
     // Don't auto-populate the camera ID field - only set when user actually selects a camera
   } catch (err) {
@@ -881,6 +866,30 @@ const loadCameras = async () => {
     camerasError.value = err.message || 'Failed to load camera devices'
   } finally {
     camerasLoading.value = false
+    
+    // After loading is complete, restore video if it was active
+    if (wasVideoActive && currentCameraId) {
+      console.log('Restoring video after camera refresh...')
+      selectedCameraId.value = currentCameraId
+      
+      // Use nextTick to ensure the loading state is fully updated
+      nextTick(() => {
+        // Stop any existing streams first
+        stopLivePlayer()
+        
+        // Wait a bit then restart (same as manual Stop → Start)
+        setTimeout(async () => {
+          try {
+            console.log('Restarting video streams...')
+            await startVideoFromButton()
+            console.log('Video restoration completed')
+          } catch (err) {
+            console.error('Error restarting video:', err)
+            livePlayerError.value = 'Failed to restart video after refresh'
+          }
+        }, 200)
+      })
+    }
   }
 }
 
@@ -1391,6 +1400,8 @@ const initializeLivePlayer = async () => {
     if (!videoElement) {
       throw new Error('Video element not found')
     }
+    
+    console.log('Video element found, proceeding with LivePlayer initialization')
 
     const baseUrl = authStore.baseUrl || `https://api.${authStore.subdomain}.eagleeyenetworks.com`
     
